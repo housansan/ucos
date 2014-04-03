@@ -25,37 +25,77 @@ struct task
 	int used;
 };
 
+enum ERRNO 
+{  
+	SUCCESS = 0,
+
+	// 没有 thread, 用完了
+	NONE,
+
+	// 指定的 priory 已经被占用
+	USED,
+};
+
 
 typedef void (*tsk_fn)(void);
-
-static ucontext_t *ucp;
-static ucontext_t uc;
-char stack[TASK_STK_SIZE];
 
 static struct task tsk[TASK_NUM];
 static struct task *cur_tsk;
 
+static char tsk_stk1[TASK_STK_SIZE];
+static char tsk_stk2[TASK_STK_SIZE];
 
 
-void fn(void)
+
+void tsk_fn1(void)
 {
+	int cnt = 0;
 	while(1) 
 	{
-		printf("in the %s\n", __func__);
-		sleep(2);
-		printf("%s\n", __func__);
+		printf("in the %s cnt = %d\n", __func__, cnt);
+		printf("come back %s cnt = %d\n", __func__, cnt);
+		cnt++;
 	}
 }
 
 
-char *task_create(tsk_fn func, char *ptos)
+void tsk_fn2(void)
+{
+	int cnt = 0;
+	while(1) 
+	{
+		printf("in the %s cnt = %d\n", __func__, cnt);
+		printf("come back %s cnt = %d\n", __func__, cnt);
+		cnt++;
+	}
+}
+
+
+char *task_stk_init(tsk_fn func, char *ptos)
 {
 	ucontext_t uc;
-	struct task *ptsk;
 	char *stk;
 	int sigsize;
-	int i;
 
+	sigsize = 20 + sizeof(uc);
+	stk = ptos - sigsize;
+
+	getcontext(&uc);
+	uc.uc_link = NULL;
+	uc.uc_mcontext.gregs[REG_EBP] = (int)stk;
+	uc.uc_stack.ss_sp = (void *)(stk - TASK_DEF_STK_SIZE + sigsize);
+	uc.uc_stack.ss_size = TASK_DEF_STK_SIZE - sigsize;
+	makecontext(&uc, func, 0);
+
+	memcpy(stk, &uc, sizeof(uc));
+
+	return stk;
+}
+
+
+int find_free_task(void)
+{
+	int i = 0;
 	for (i = 0; i < TASK_NUM; ++i)
 	{
 		if (0 == tsk[i].used)
@@ -64,61 +104,68 @@ char *task_create(tsk_fn func, char *ptos)
 		}
 	}
 
-	tsk[i].used = 1;
-	ptsk = &tsk[i];
-
-	sigsize = 20 + sizeof(uc);
-	ptsk->stk = stk = ptos - sigsize;
-
-	getcontext(&uc);
-	uc.uc_link = NULL;
-	uc.uc_mcontext.gregs[REG_EBP] = (int)stk;
-	uc.uc_stack.ss_sp = (void *)(stk - TASK_DEF_STK_SIZE + sigsize);
-	uc.uc_stack.ss_size = TASK_DEF_STK_SIZE - sigsize;
-
-//	uc.uc_stack.ss_sp = stack;
-//	uc.uc_stack.ss_size = sizeof(stack);
-
-	makecontext(&uc, func, 0);
+	return i;
+}
 
 
-//	memcpy(ucp, &uc, sizeof(uc));
+int task_create(tsk_fn func, char *ptos)
+{
+	struct task *ptsk;
+	int priority;
 
-	memcpy(stk, &uc, sizeof(uc));
+	priority = find_free_task();
 
-	return (stk);
+	tsk[priority].used = 1;
+	ptsk = &tsk[priority];
+
+	ptsk->stk = task_stk_init(func, ptos);
+
+	return 0;
 }
 
 
 void start_task(void)
 {
-	ucontext_t *puc;
+	ucontext_t *ucp;
 	cur_tsk = &tsk[0];
 
-	puc = (ucontext_t *)cur_tsk->stk;
+	ucp = (ucontext_t *)cur_tsk->stk;
 
-	setcontext(puc);
+	setcontext(ucp);
+}
+
+
+void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
+{
+
+}
+
+
+void ctx_sw_sig_handler(int signo, siginfo_t *info, void *uc)
+{
+}
+
+
+void sig_init(void)
+{
+	struct sigaction act;
+	act.sa_flags = SA_SIGINFO;
+	sigemptyset(&act.sa_mask);
+	act.sa_sigaction = time_tick_sig_handler;
+	sigaction(SIGALRM, &act, NULL);
+
+	act.sa_flags = SA_SIGINFO;
+	sigemptyset(&act.sa_mask);
+	act.sa_sigaction = ctx_sw_sig_handler;
+	sigaction(SIGUSR1, &act, NULL);
 }
 
 
 int main(int argc, char *argv[])
 {
-//	ucp = malloc(sizeof(ucontext_t));
-	task_create(fn, &stack[TASK_STK_SIZE - 1]);
-//	getcontext(&uc);
-//	uc.uc_link = NULL;
-//	uc.uc_stack.ss_sp = stack;
-//	uc.uc_stack.ss_size = sizeof(stack);
-//	makecontext(&uc, fn, 0);
-//
-//	memcpy(ucp, &uc, sizeof(uc));
-
-	sleep(1);
-
-//	ucontext_t *puc;
-//	cur_tsk = &tsk[0];
-
-//	puc = (ucontext_t *)cur_tsk->stk;
+	sig_init();
+	task_create(tsk_fn1, &tsk_stk1[TASK_STK_SIZE - 1]);
+	task_create(tsk_fn2, &tsk_stk2[TASK_STK_SIZE - 1]);
 
 	start_task();
 
