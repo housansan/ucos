@@ -34,20 +34,20 @@ void tick_isr(void)
 
 void alarm_act(int signo, siginfo_t *info, void *uc)
 {
-	printf("in the %s\n", __func__);
-//	if ((((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] >= (unsigned int)setcontext) &&
-//			(((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] < (unsigned int)(setcontext + 110))) {
-//		//fprintf(stderr, "sig timer: thread interrupted in setcontext\n");
-//		return;
-//	}
-//	if (((ucontext_t*)uc)->uc_mcontext.fpregs == 0) {
-//		//fprintf(stderr, "sig timer: uc->uc_mcontext.fpregs == 0\n");
-//		return;
-//	}
-//	current->stk = uc; //stk;
-//
-//
-//	tick_isr();
+//	printf("in the %s\n", __func__);
+	if ((((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] >= (unsigned int)setcontext) &&
+			(((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] < (unsigned int)(setcontext + 110))) {
+		//fprintf(stderr, "sig timer: thread interrupted in setcontext\n");
+		return;
+	}
+	if (((ucontext_t*)uc)->uc_mcontext.fpregs == 0) {
+		//fprintf(stderr, "sig timer: uc->uc_mcontext.fpregs == 0\n");
+		return;
+	}
+	current->stk = uc; //stk;
+
+
+	tick_isr();
 	// restore context
 }
 
@@ -77,7 +77,7 @@ char *stk_init(task_fn tsk, char *ptos)
 
 	ucontext_t *tmp = (ucontext_t *)stk;
 
-	return ((char *)stk);
+	return (stk);
 }
 
 
@@ -142,15 +142,17 @@ void os_init(void)
 
 void tsk1_fn(void)
 {
+	int cnt = 0;
 	int i = 0;
 
 	while (1)
 	{
-		printf("in the %s\n", __func__);
+		printf("in the %s cnt = %d\n", __func__, cnt);
 		for (i = 0; i < N; ++i);
 		for (i = 0; i < N; ++i);
 		for (i = 0; i < N; ++i);
-		printf("come back %s\n", __func__);
+		printf("come back %s cnt = %d\n", __func__, cnt);
+		cnt++;
 	}
 }
 
@@ -158,14 +160,16 @@ void tsk1_fn(void)
 void tsk2_fn(void)
 {
 	int i = 0;
+	int cnt = 0;
 
 	while (1)
 	{
-		printf("in the %s\n", __func__);
+		printf("in the %s tk_cnt = %d\n", __func__, cnt);
 		for (i = 0; i < N; ++i);
 		for (i = 0; i < N; ++i);
 		for (i = 0; i < N; ++i);
-		printf("come back %s\n", __func__);
+		printf("come back %s tk_cnt = %d\n", __func__, cnt);
+		cnt++;
 	}
 
 }
@@ -189,7 +193,7 @@ int main(int argc, char *argv[])
 
 
 	usec = 10000;
-//	ualarm(usec, usec);
+	ualarm(usec, usec);
 
 	// 创建 task
 	
