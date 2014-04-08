@@ -6,24 +6,16 @@
  *  出错原因: stack size 小了
  *
  * 2. 增加 ualarm
+ * 3. 实现优先级时间片 
+ *		time_sliec = prio + 1
  */
 
 
-#include <stdio.h> 
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include "emos.h"
 
-#define __USE_GNU
-#include <ucontext.h> 
-
-
-#include "tinythread.h"
-
-
-static struct task tsk[TASK_NUM];
-static struct task *cur_tsk;
-static int tsk_thread_id;
+extern struct task tsk[TASK_NUM];
+extern struct task *cur_tsk;
+extern int tsk_thread_id;
 
 static char tsk_stk1[TASK_STK_SIZE];
 static char tsk_stk2[TASK_STK_SIZE];
@@ -92,77 +84,30 @@ void tsk_fn3(void)
 }
 
 
-char *task_stk_init(tsk_fn func, char *ptos)
+int find_next_task(void)
 {
-	ucontext_t uc;
-	char *stk;
-	int sigsize;
+#if TASK_CYCLE
 
-	sigsize = 20 + sizeof(uc);
-	stk = ptos - sigsize;
+	tsk_thread_id++;
+	tsk_thread_id = tsk_thread_id % TASK_NUM;
+	return tsk_thread_id;
 
-	getcontext(&uc);
-	uc.uc_link = NULL;
-	uc.uc_mcontext.gregs[REG_EBP] = (int)stk;
-	uc.uc_stack.ss_sp = (void *)(stk - TASK_DEF_STK_SIZE + sigsize);
-	uc.uc_stack.ss_size = TASK_DEF_STK_SIZE - sigsize;
-	makecontext(&uc, func, 0);
+#elif TASK_PRIORITY
 
-	memcpy(stk, &uc, sizeof(uc));
-
-	return stk;
-}
-
-
-int find_free_task(void)
-{
 	int i = 0;
-	for (i = 0; i < TASK_NUM; ++i)
+	for (i = TASK_NUM - 1; i >= 0; --i)
 	{
-		if (0 == tsk[i].used)
+		if (0 !=tsk[i].time_slice)
 		{
 			break;
 		}
 	}
 
 	return i;
+
+#endif
 }
 
-
-int find_next_task(void)
-{
-	tsk_thread_id++;
-	tsk_thread_id = tsk_thread_id % TASK_NUM;
-	return tsk_thread_id;
-}
-
-
-int task_create(tsk_fn func, char *ptos)
-{
-	struct task *ptsk;
-	int priority;
-
-	priority = find_free_task();
-
-	tsk[priority].used = 1;
-	ptsk = &tsk[priority];
-
-	ptsk->stk = task_stk_init(func, ptos);
-
-	return 0;
-}
-
-
-void start_task(void)
-{
-	ucontext_t *ucp;
-	tsk_thread_id = 0;
-	cur_tsk = &tsk[tsk_thread_id];
-
-	ucp = (ucontext_t *)cur_tsk->stk;
-
-	setcontext(ucp);
-}
 
 
 /*
