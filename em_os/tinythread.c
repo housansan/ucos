@@ -13,8 +13,8 @@
 
 #include "emos.h"
 
-extern struct task tsk[TASK_NUM];
-extern struct task *cur_tsk;
+extern struct tcb tcb_tbl[TASK_NUM];
+extern struct tcb *cur_tcb;
 extern int tsk_thread_id;
 
 static char tsk_stk1[TASK_STK_SIZE];
@@ -22,7 +22,6 @@ static char tsk_stk2[TASK_STK_SIZE];
 static char tsk_stk3[TASK_STK_SIZE];
 
 
-static sigset_t cpu_sr;
 
 
 void delay(int n)
@@ -43,7 +42,7 @@ void tsk_fn1(void)
 		printf("in the %s cnt = %d\n", __func__, cnt);
 		EXIT_CRITICAL();
 		// ...
-		delay(N);
+		sleep(5);
 
 		ENTER_CRITICAL();
 		printf("come back %s cnt = %d\n", __func__, cnt);
@@ -60,7 +59,7 @@ void tsk_fn2(void)
 	{
 		printf("in the %s cnt = %d\n", __func__, cnt);
 
-		delay(N);
+		sleep(2);
 
 		printf("come back %s cnt = %d\n", __func__, cnt);
 		cnt++;
@@ -75,37 +74,12 @@ void tsk_fn3(void)
 	{
 		printf("in the %s cnt = %d\n", __func__, cnt);
 
-		delay(N);
+		sleep(3);
 
 		printf("come back %s cnt = %d\n", __func__, cnt);
 
 		cnt++;
 	}
-}
-
-
-int find_next_task(void)
-{
-#if TASK_CYCLE
-
-	tsk_thread_id++;
-	tsk_thread_id = tsk_thread_id % TASK_NUM;
-	return tsk_thread_id;
-
-#elif TASK_PRIORITY
-
-	int i = 0;
-	for (i = TASK_NUM - 1; i >= 0; --i)
-	{
-		if (0 !=tsk[i].time_slice)
-		{
-			break;
-		}
-	}
-
-	return i;
-
-#endif
 }
 
 
@@ -129,13 +103,14 @@ void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 		return;
 	}
 
-	cur_tsk->stk = uc;
+	cur_tcb->stk = uc;
 
 	tsk_thread_id = find_next_task();
 	
-	cur_tsk = &tsk[tsk_thread_id];
+	cur_tcb = &tcb_tbl[tsk_thread_id];
+	//cur_tcb->time_slice--;
 
-	 ucp = (ucontext_t *)cur_tsk->stk;
+	ucp = (ucontext_t *)cur_tcb->stk;
 
 	setcontext(ucp);
 }
@@ -170,10 +145,19 @@ void alrm_init(void)
 
 int main(int argc, char *argv[])
 {
+	int i = 0;
 	sig_init();
-	task_create(tsk_fn1, &tsk_stk1[TASK_STK_SIZE - 1]);
-	task_create(tsk_fn2, &tsk_stk2[TASK_STK_SIZE - 1]);
-	task_create(tsk_fn3, &tsk_stk3[TASK_STK_SIZE - 1]);
+
+	tcb_head_init();
+
+	task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
+	task_create(tsk_fn1, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
+	task_create(tsk_fn1, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
+
+	for (i = 0; i < TASK_NUM; ++i)
+	{
+		debug("prio: %d, time_slice: %d\n", i, tcb_tbl[i].time_slice);
+	}
 
 	alrm_init();
 	start_task();

@@ -5,11 +5,12 @@
 #define TASK_DEF_STK_SIZE	(10240)
 #define TASK_STK_SIZE		TASK_DEF_STK_SIZE	
 #define TASK_NUM		(3)
+#define LOWEST_PRIO			(63)
 
 #define N					(TASK_DEF_STK_SIZE)
 
 
-#define TASK_CYCLE			1
-#define TASK_PRIORITY		0
+#define TASK_CYCLE			0
+#define TASK_PRIORITY		1
 
 #endif
