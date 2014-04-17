@@ -19,6 +19,15 @@ struct list_head
 #define list_entry(ptr, type, member)	\
 	container_of(ptr, type, member)
 
+#define list_for_each(pos, head)		\
+	for (pos = (head)->next; pos != (head); pos = pos->next)
+
+#define list_for_each_entry(pos, head, member)	\
+	for (pos = list_entry((head)->next, typeof(*pos), member);	\
+			&pos->member != (head);	\
+			pos = list_entry(pos->member.next, typeof(*pos), member))
+
+
 
 #define LIST_HEAD_INIT(name)	{&(name), &(name)}
 #define LIST_HEAD(name)	\
