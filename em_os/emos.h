@@ -26,10 +26,10 @@
 
 struct tcb
 {
-	char *stk;
+	u8 *stk;
 	int used;
 
-	int prio;
+	u8 prio;
 	int time_slice;
 
 	/*
@@ -67,15 +67,25 @@ int tsk_thread_id;
 
 sigset_t cpu_sr;
 
+u8 rdy_grp;
+// LOWEST_PRIO = 63
+u8 rdy_tbl[LOWEST_PRIO/8 + 1];
 
 
 
-extern int task_create(tsk_fn func, int prio, char *ptos);
+
+extern int task_create(tsk_fn func, int prio, u8 *ptos);
 extern void start_task(void);
 extern int find_next_task(void);
 
 
 extern void tcb_head_init(void);
+extern void tcb_exit_rdy(u8 prio);
+extern void tcb_enter_rdy(u8 prio);
+
+extern void time_tick(void);
+
+extern void time_dly(int ticks);
 
 
 /*

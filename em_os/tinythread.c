@@ -17,9 +17,9 @@ extern struct tcb tcb_tbl[TASK_NUM];
 extern struct tcb *cur_tcb;
 extern int tsk_thread_id;
 
-static char tsk_stk1[TASK_STK_SIZE];
-static char tsk_stk2[TASK_STK_SIZE];
-static char tsk_stk3[TASK_STK_SIZE];
+static u8 tsk_stk1[TASK_STK_SIZE];
+static u8 tsk_stk2[TASK_STK_SIZE];
+static u8 tsk_stk3[TASK_STK_SIZE];
 
 
 
@@ -91,6 +91,7 @@ void tsk_fn3(void)
 void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 {
 	ucontext_t *ucp;
+	u8 next_prio;
 	printf("enter %s\n", __func__);
 	
 	if ((((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] >= (unsigned int)setcontext) &&
@@ -103,12 +104,19 @@ void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 		return;
 	}
 
-	cur_tcb->stk = uc;
+	time_tick();
 
-	tsk_thread_id = find_next_task();
+	next_prio = find_next_task();
+	if (next_prio == tsk_thread_id)
+	{
+		return;
+	}
+
+	tsk_thread_id = next_prio;
+
+	cur_tcb->stk = uc;
 	
 	cur_tcb = &tcb_tbl[tsk_thread_id];
-	//cur_tcb->time_slice--;
 
 	ucp = (ucontext_t *)cur_tcb->stk;
 
@@ -151,8 +159,8 @@ int main(int argc, char *argv[])
 	tcb_head_init();
 
 	task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
-	task_create(tsk_fn1, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
-	task_create(tsk_fn1, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
+	task_create(tsk_fn2, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
+	task_create(tsk_fn3, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
 
 	for (i = 0; i < TASK_NUM; ++i)
 	{

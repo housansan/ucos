@@ -45,8 +45,32 @@ void tcb_head_init(void)
 
 /*
  * 遍历 tcb_head 将delay--
+ * 注意 tcb 的 stat 要是就绪状态
  */
 void time_tick(void)
 {
-	/* code */
+	struct tcb *ptcb;
+	int dly;
+	u8 prio;
+
+	ENTER_CRITICAL();
+
+	list_for_each_entry(ptcb, tcb_head, list)
+	{
+		dly = ptcb->delay;
+		prio = ptcb->prio;
+		if (dly > 0)
+		{
+			dly--;
+			if (0 == dly)
+			{
+				tcb_enter_rdy(prio);
+			}
+			ptcb->delay = dly;
+		}
+
+		debug("%s prio: %d\n", __func__, prio);
+	}
+
+	EXIT_CRITICAL();
 }

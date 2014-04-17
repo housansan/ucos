@@ -5,6 +5,31 @@
 #include "emos.h"
 
 
+
+const u8 map_tbl[] = {
+	1, 2, 4, 8, 16, 32, 64, 128,
+};
+
+const u8 unmap_tbl[] = {
+	0, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	7, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	6, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	5, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+	4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 
+};
+
+
 /*
  * return struct tcb *
  */
@@ -29,10 +54,10 @@ done:
 }
 
 
-static char *task_stk_init(tsk_fn func, char *ptos)
+static u8 *task_stk_init(tsk_fn func, u8 *ptos)
 {
 	ucontext_t uc;
-	char *stk;
+	u8 *stk;
 	int sigsize;
 
 	sigsize = 20 + sizeof(uc);
@@ -51,7 +76,7 @@ static char *task_stk_init(tsk_fn func, char *ptos)
 }
 
 
-static struct tcb *tcb_get_init(int prio, char *ptos)
+static struct tcb *tcb_get_init(int prio, u8 *ptos)
 {
 	struct tcb *ptcb = NULL;
 	ptcb = find_free_tcb();
@@ -72,17 +97,48 @@ no_more_tcb:
 }
 
 
+void tcb_exit_rdy(u8 prio)
+{
+	u8 x;
+	u8 y;
+
+	x = prio & 0x7;
+	y = (prio >> 3) & 0x7;
+
+	if (0 == (rdy_tbl[y] &= ~(map_tbl[x])))
+	{
+		rdy_grp &= ~(map_tbl[y]);
+	}
+}
+
+
+void tcb_enter_rdy(u8 prio)
+{
+	u8 x;
+	u8 y;
+
+	x = prio & 0x7;
+	y = (prio >> 3) & 0x7;
+
+	rdy_grp |= map_tbl[y];
+	rdy_tbl[y] |= map_tbl[x];
+}
+
+
 /*
  * 加入 tcb_head 的管理
  */
 static void tcb_manage(struct tcb *ptcb)
 {
+	u8 prio = ptcb->prio;
 	// 将高优先级
 	if (cur_tcb->prio <= ptcb->prio)
 	{
 		
 	}
 	list_add(&ptcb->list, tcb_head);
+
+	tcb_enter_rdy(prio);
 }
 
 /*
@@ -93,10 +149,10 @@ static void tcb_manage(struct tcb *ptcb)
  * 返回错误码
  *
  */
-int task_create(tsk_fn func, int prio, char *ptos)
+int task_create(tsk_fn func, int prio, u8 *ptos)
 {
 	struct tcb *ptcb;
-	char *pstk;
+	u8 *pstk;
 	
 	if (tcb_prio_tbl[prio])
 	{
@@ -128,7 +184,7 @@ tcb_used:
 }
 
 
-//int task_create(tsk_fn func, char *ptos)
+//int task_create(tsk_fn func, u8 *ptos)
 //{
 	//struct tcb *ptcb;
 	//int prio;
@@ -157,15 +213,14 @@ void start_task(void)
 
 	tsk_thread_id = find_next_task();
 
+	debug("%s %d\n", __func__, tsk_thread_id);
+
 	cur_tcb = &tcb_tbl[tsk_thread_id];
 
 	ucp = (ucontext_t *)cur_tcb->stk;
 
 	setcontext(ucp);
 }
-
-
-
 
 
 int find_next_task(void)
@@ -185,23 +240,32 @@ int find_next_task(void)
 
 #elif TASK_PRIORITY
 
-	for (i = TASK_NUM - 1; i >= 0; --i)
-	{
-		if (0 != tcb_tbl[i].time_slice)
-		{
-			tcb_tbl[i].time_slice--;
-			break;
-		}
-	}
+	//for (i = TASK_NUM - 1; i >= 0; --i)
+	//{
+		//if (0 != tcb_tbl[i].time_slice)
+		//{
+			//tcb_tbl[i].time_slice--;
+			//break;
+		//}
+	//}
 
-	if (i < 0)
-	{
-		i = 0;
-	}
+	//if (i < 0)
+	//{
+		//i = 0;
+	//}
+
+	// 选出最高优先级
+	u8 y = unmap_tbl[rdy_grp];
+	u8 x = unmap_tbl[rdy_tbl[y]];
+	u8 prio = (y << 3) | x;
+	i = prio;
+
+	debug("%s prio: %d\n", __func__, prio);
 
 #endif
 
 	EXIT_CRITICAL();
+
 
 	return i;
 }

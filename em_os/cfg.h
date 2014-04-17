@@ -13,4 +13,9 @@
 #define TASK_CYCLE			0
 #define TASK_PRIORITY		1
 
+
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+
 #endif
