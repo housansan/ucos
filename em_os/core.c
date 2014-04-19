@@ -67,10 +67,45 @@ void time_tick(void)
 				tcb_enter_rdy(prio);
 			}
 			ptcb->delay = dly;
+			debug("%s prio: %d dly: %d\n", __func__, prio, dly);
 		}
 
-		debug("%s prio: %d\n", __func__, prio);
 	}
 
 	EXIT_CRITICAL();
+}
+
+
+/*
+ * 任务的切换
+ * 1. 将当前 task 设置tsk_exit_rdy(要不然下一步又是找的当前的task)
+ * 2. 找到最高优先级
+ * 3. context switch
+ */
+void schedule(void)
+{
+	u8 prio;
+
+	ENTER_CRITICAL();
+
+	prio = cur_tcb->prio;
+	tcb_exit_rdy(prio);
+
+	task_sw();
+
+	EXIT_CRITICAL();
+}
+
+
+void ctx_sw(void)
+{
+	u8 prio;
+	ucontext_t *ucp;
+
+	prio = find_next_task();
+	cur_tcb = tcb_prio_tbl[prio];
+
+	ucp = (ucontext_t *)cur_tcb->stk;
+
+	setcontext(ucp);
 }
