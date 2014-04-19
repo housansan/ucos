@@ -86,14 +86,16 @@ void schedule(void)
 {
 	u8 prio;
 
-	ENTER_CRITICAL();
+	//ENTER_CRITICAL();
 
 	prio = cur_tcb->prio;
 	tcb_exit_rdy(prio);
 
 	task_sw();
 
-	EXIT_CRITICAL();
+	debug("%s exit critical\n", __func__);
+
+//	EXIT_CRITICAL();
 }
 
 

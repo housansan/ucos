@@ -228,7 +228,7 @@ int find_next_task(void)
 
 	int i = 0;
 
-	ENTER_CRITICAL();
+//	ENTER_CRITICAL();
 
 #if TASK_CYCLE
 
@@ -264,7 +264,7 @@ int find_next_task(void)
 
 #endif
 
-	EXIT_CRITICAL();
+//	EXIT_CRITICAL();
 
 
 	return i;
