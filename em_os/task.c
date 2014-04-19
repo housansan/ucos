@@ -215,7 +215,7 @@ void start_task(void)
 
 	debug("%s %d\n", __func__, tsk_thread_id);
 
-	cur_tcb = &tcb_tbl[tsk_thread_id];
+	cur_tcb = tcb_prio_tbl[tsk_thread_id];
 
 	ucp = (ucontext_t *)cur_tcb->stk;
 
@@ -260,7 +260,7 @@ int find_next_task(void)
 	u8 prio = (y << 3) | x;
 	i = prio;
 
-	debug("%s prio: %d\n", __func__, prio);
+	debug("%s prio: %d rdy_grp: %d rdy_tbl: %d\n", __func__, prio, rdy_grp, rdy_tbl[y]);
 
 #endif
 

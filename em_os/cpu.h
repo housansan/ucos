@@ -14,5 +14,8 @@
 #define EXIT_CRITICAL()		{sigprocmask(SIG_SETMASK, &cpu_sr, NULL);}
 
 
+#define task_sw()	{kill(getpid(), SIGUSR1);}
+
+
 
 #endif

@@ -48,6 +48,14 @@ void tsk_fn1(void)
 		printf("come back %s cnt = %d\n", __func__, cnt);
 		EXIT_CRITICAL();
 		cnt++;
+
+		if (10 == cnt)
+		{
+			time_dly(cnt);
+			cnt = 0;
+		}
+
+		printf("%s time_dly back\n", __func__);
 	}
 }
 
@@ -116,7 +124,7 @@ void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 
 	cur_tcb->stk = uc;
 	
-	cur_tcb = &tcb_tbl[tsk_thread_id];
+	cur_tcb = tcb_prio_tbl[tsk_thread_id];
 
 	ucp = (ucontext_t *)cur_tcb->stk;
 
@@ -126,6 +134,8 @@ void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 
 void ctx_sw_sig_handler(int signo, siginfo_t *info, void *uc)
 {
+	cur_tcb->stk = uc;
+	ctx_sw();
 }
 
 

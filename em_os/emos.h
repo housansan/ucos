@@ -88,6 +88,10 @@ extern void time_tick(void);
 extern void time_dly(int ticks);
 
 
+extern void schedule(void);
+extern void ctx_sw(void);
+
+
 /*
  * ERROR NUM
  */

@@ -14,6 +14,6 @@ void time_dly(int ticks)
 
 		EXIT_CRITICAL();
 
-//		scheduler();
+		schedule();
 	}
 }
