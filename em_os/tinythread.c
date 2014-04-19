@@ -53,9 +53,9 @@ void tsk_fn1(void)
 		{
 			time_dly(cnt);
 			cnt = 0;
+			printf("%s time_dly back\n", __func__);
 		}
 
-		printf("%s time_dly back\n", __func__);
 	}
 }
 
