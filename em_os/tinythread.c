@@ -71,6 +71,13 @@ void tsk_fn2(void)
 
 		printf("come back %s cnt = %d\n", __func__, cnt);
 		cnt++;
+
+		if (5 == cnt)
+		{
+			time_dly(cnt);
+			cnt = 0;
+			printf("%s time_dly back\n", __func__);
+		}
 	}
 }
 
@@ -89,6 +96,8 @@ void tsk_fn3(void)
 		cnt++;
 	}
 }
+
+
 
 
 

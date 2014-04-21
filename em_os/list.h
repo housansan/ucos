@@ -70,6 +70,27 @@ static inline void list_del(struct list_head *entry)
 }
 
 
+static inline void INIT_LIST_HEAD(struct list_head *list)
+{
+	list->prev = list;
+	list->next = list;
+}
+
+
+static inline void list_del_init(struct list_head *entry)
+{
+	list_del(entry);
+	INIT_LIST_HEAD(entry);
+}
+
+
+static inline void list_move(struct list_head *entry, struct list_head *head)
+{
+	list_del_init(entry);
+	list_add(entry, head);
+}
+
+
 static inline int list_empty(struct list_head *head)
 {
 	return (head->next == head);
