@@ -2,6 +2,8 @@
  * TASK 相关函数
  */
 
+#define TASK_GLOBAL
+
 #include "emos.h"
 
 
@@ -162,13 +164,198 @@ void start_task(void)
 {
 	ucontext_t *ucp;
 
-	tsk_thread_id = find_next_task();
+	cur_prio = find_next_task();
 
-	debug("%s %d\n", __func__, tsk_thread_id);
+	debug("%s %d\n", __func__, cur_prio);
 
-	cur_tcb = tcb_prio_tbl[tsk_thread_id];
+	cur_tcb = tcb_prio_tbl[cur_prio];
+
+	high_rdy = cur_prio;
+	tcb_high_rdy = cur_tcb;
 
 	ucp = (ucontext_t *)cur_tcb->stk;
 
 	setcontext(ucp);
+}
+
+
+u8 task_suspend(u8 prio)
+{
+	struct tcb *ptcb;
+	u8 self;
+
+	/*
+	 * prio == TASK_IDLE_PRIO
+	 * 不允许 suspend idle task
+	 */
+	if (prio == TASK_IDLE_PRIO)
+	{
+		return TASK_SUSPEND_IDLE;
+	}
+
+	/*
+	 * invalid prio
+	 */
+	if (prio > LOWEST_PRIO)
+	{
+		if (PRIO_SELF != prio)
+		{
+			return PRIO_INVALID;
+		}
+	}
+
+
+	ENTER_CRITICAL();
+
+	if (prio == PRIO_SELF)
+	{
+		prio = cur_tcb->prio;
+		self = 1;
+	}
+	else if (prio == cur_tcb->prio)
+	{
+		self = 1;
+	}
+	else
+	{
+		self = 0;
+	}
+
+	ptcb = tcb_prio_tbl[prio];
+
+	if (NULL == ptcb)
+	{
+		goto task_no_exist;
+	}
+
+	if (HOLD == ptcb)
+	{
+		goto task_no_exist;
+	}
+
+	ptcb->stat |= TASK_SUSPEND;
+
+	tcb_exit_rdy(prio);
+
+	EXIT_CRITICAL();
+
+
+	if (self)
+	{
+		schedule();
+	}
+
+	return NO_ERR;
+
+task_no_exist:
+	EXIT_CRITICAL();
+	return TASK_NO_EXIST;
+}
+
+
+u8 task_resume(u8 prio)
+{
+	struct tcb *ptcb;
+
+	if (prio > LOWEST_PRIO)
+	{
+		return PRIO_INVALID;
+	}
+
+	ENTER_CRITICAL();
+
+	ptcb = tcb_prio_tbl[prio];
+	if (NULL == ptcb)
+	{
+		goto task_no_exist;
+	}
+	else if (HOLD == ptcb)
+	{
+		goto task_no_exist;
+	}
+
+	/*
+	 * task 必须要有 TASK_SUSPEND
+	 */
+	if (TASK_RDY != (ptcb->stat & TASK_SUSPEND))
+	{
+		ptcb->stat &= ~TASK_SUSPEND;
+		if (TASK_RDY == ptcb->stat)
+		{
+			if (ptcb->delay == 0)
+			{
+				tcb_enter_rdy(prio);
+				EXIT_CRITICAL();
+				schedule();
+			}
+			else 
+			{
+				EXIT_CRITICAL();
+			}
+		}
+		else 
+		{
+			EXIT_CRITICAL();
+		}
+
+		return NO_ERR;
+	}
+	
+
+	EXIT_CRITICAL();
+	return TASK_NO_SUSPEND;
+
+task_no_exist:
+
+	EXIT_CRITICAL();
+	return TASK_NO_EXIST;
+}
+
+
+/*
+ * 查询 task
+ */
+u8 task_query(u8 prio, struct tcb *p_task_data)
+{
+	struct tcb *ptcb;
+
+	if (prio > LOWEST_PRIO)
+	{
+		if (prio != PRIO_SELF)
+		{
+			return PRIO_INVALID;
+		}
+	}
+
+	if (NULL == p_task_data)
+	{
+//		return ERR_PDATA_NULL;
+	}
+
+	ENTER_CRITICAL();
+
+	if (prio == PRIO_SELF)
+	{
+		prio = cur_tcb->prio;
+		ptcb = tcb_prio_tbl[prio];
+	}
+
+	ptcb = tcb_prio_tbl[prio];
+
+	if (NULL == ptcb || HOLD == ptcb)
+	{
+		goto task_no_exist;
+	}
+
+	memcpy(p_task_data, ptcb, sizeof(struct tcb));
+
+	EXIT_CRITICAL();
+	
+	return NO_ERR;
+
+task_no_exist:
+
+	EXIT_CRITICAL();
+	return TASK_NO_EXIST;
+
 }

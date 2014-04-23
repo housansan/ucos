@@ -51,9 +51,9 @@ void tsk_fn1(void)
 
 		if (10 == cnt)
 		{
-			time_dly(cnt);
+			task_suspend(PRIO_SELF);
 			cnt = 0;
-			printf("%s time_dly back\n", __func__);
+			printf("%s jiffies %d\n", __func__, time_get());
 		}
 
 	}
@@ -74,7 +74,7 @@ void tsk_fn2(void)
 
 		if (5 == cnt)
 		{
-			time_dly(cnt);
+			task_resume(0);
 			cnt = 0;
 			printf("%s time_dly back\n", __func__);
 		}
@@ -108,7 +108,6 @@ void tsk_fn3(void)
 void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 {
 	ucontext_t *ucp;
-	u8 next_prio;
 	printf("enter %s\n", __func__);
 	
 	if ((((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] >= (unsigned int)setcontext) &&
@@ -123,17 +122,17 @@ void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 
 	time_tick();
 
-	next_prio = find_next_task();
-	if (next_prio == tsk_thread_id)
+	high_rdy = find_next_task();
+	if (high_rdy == cur_prio)
 	{
 		return;
 	}
 
-	tsk_thread_id = next_prio;
 
 	cur_tcb->stk = uc;
 	
-	cur_tcb = tcb_prio_tbl[tsk_thread_id];
+	cur_prio = high_rdy;
+	cur_tcb = tcb_high_rdy = tcb_prio_tbl[cur_prio];
 
 	ucp = (ucontext_t *)cur_tcb->stk;
 

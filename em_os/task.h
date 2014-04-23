@@ -5,15 +5,30 @@
 #include "cfg.h"
 
 
+/*
+ * 目的:
+ * 在 *.c 中定义
+ * 在 *.h 中声明
+ */
+#ifdef	TASK_GLOBAL
+#define TASK_EXT
+#else
+#define TASK_EXT	extern
+#endif
+
+
 
 /*
  * task status
  */
 enum task_stat
 {
-	TSK_RUNNING,
-	TSK_RDY,
-	TSK_SLEEP,
+	TASK_RDY,
+//	TASK_SEM,
+//	TASK_MBOX,
+//	TASK_Q,
+	TASK_SUSPEND,
+//	TASK_MUTEX,
 };
 
 
@@ -26,6 +41,8 @@ struct tcb
 	int used;
 
 	u8 prio;
+	// 使用id来唯一确定task
+	u8 tcb_id;
 	int time_slice;
 
 	/*
@@ -33,7 +50,7 @@ struct tcb
 	 * 2. pending
 	 * 3. sleep
 	 */
-	enum task_stat state;
+	u8 stat;
 
 	// sleep time
 	int delay;
@@ -47,30 +64,38 @@ typedef void (*tsk_fn)(void);
 
 // 管理所有空闲的tcb
 // 从这里取得 tcb
-struct list_head *tcb_free_head;
+TASK_EXT struct list_head *tcb_free_head;
 
 // 管理rdy中的tcb
-struct list_head *tcb_rdy_head;
+TASK_EXT struct list_head *tcb_rdy_head;
 
 // delay list
 // 当 task 使用 delay 时遍历task将delay--
 // 当 dly == 0 时需要从 tcb_dly_head 删除 ptcb
 // 而此时正在操作 tcb_dly_head
-struct list_head *tcb_dly_head;
+TASK_EXT struct list_head *tcb_dly_head;
 
-struct tcb *cur_tcb;
+TASK_EXT struct tcb *cur_tcb;
 
-struct tcb *tcb_prio_tbl[LOWEST_PRIO + 1];
+// current priority
+TASK_EXT u8 cur_prio;
+
+// the highest priority
+TASK_EXT u8 high_rdy;
+
+TASK_EXT struct tcb *tcb_high_rdy;
+
+TASK_EXT struct tcb *tcb_prio_tbl[LOWEST_PRIO + 1];
 // table oftask control block
-struct tcb tcb_tbl[TASK_NUM];
+TASK_EXT struct tcb tcb_tbl[TASK_NUM];
 
-int tsk_thread_id;
+TASK_EXT int tsk_thread_id;
 
-sigset_t cpu_sr;
+TASK_EXT sigset_t cpu_sr;
 
-u8 rdy_grp;
+TASK_EXT u8 rdy_grp;
 // LOWEST_PRIO = 63
-u8 rdy_tbl[LOWEST_PRIO/8 + 1];
+TASK_EXT u8 rdy_tbl[LOWEST_PRIO/8 + 1];
 
 
 
@@ -80,7 +105,18 @@ extern void start_task(void);
 
 extern int find_next_task(void);
 
+extern u8 task_suspend(u8 prio);
+
+extern u8 task_resume(u8 prio);
+
 
 #define HOLD	((struct tcb *)1)
+
+
+#define TASK_RDY	0
+#define TASK_SUSPEND	(1 << 1)
+
+
+#define PRIO_SELF		(0xff)
 
 #endif

@@ -1,6 +1,8 @@
+
+
+#define TIME_GLOBAL
 #include "emos.h"
 
-static u32 jiffies;
 
 /*
  * 目的:
@@ -28,7 +30,7 @@ void time_dly(int ticks)
 /*
  * ticks
  */
-void time_get(u32 ticks)
+void time_set(u32 ticks)
 {
 	ENTER_CRITICAL();
 
@@ -38,7 +40,7 @@ void time_get(u32 ticks)
 }
 
 
-u32 time_set(void)
+u32 time_get(void)
 {
 	u32 ticks;
 

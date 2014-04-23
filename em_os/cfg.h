@@ -6,6 +6,7 @@
 #define TASK_STK_SIZE		TASK_DEF_STK_SIZE	
 #define TASK_NUM		(3)
 #define LOWEST_PRIO			(63)
+#define TASK_IDLE_PRIO		(LOWEST_PRIO)
 
 #define N					(TASK_DEF_STK_SIZE)
 

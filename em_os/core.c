@@ -42,6 +42,12 @@ void mem_clr(void *ptr, int len)
 }
 
 
+void mem_cpy(void *dest, void *src, u32 len)
+{
+	//
+}
+
+
 /*
  * 1. 将所有的 tcb 加入 tcb_free_head
  * 2. 初始化 tcb_head
@@ -81,6 +87,8 @@ void time_tick(void)
 	u8 prio;
 
 	ENTER_CRITICAL();
+	
+	jiffies++;
 
 	list_for_each_entry(ptcb, tcb_rdy_head, list)
 	{
@@ -119,22 +127,35 @@ void tick_isr(void)
 
 /*
  * 任务的切换
- * 1. 将当前 task 设置tsk_exit_rdy(要不然下一步又是找的当前的task)
+ * 1. FIXME 将当前 task 设置tsk_exit_rdy(要不然下一步又是找的当前的task)
+ *		找到最高优先级与当前比较如果一样则不 schedule 否则 schedule
  * 2. 找到最高优先级
  * 3. context switch
  */
 void schedule(void)
 {
-	u8 prio;
-
 	ENTER_CRITICAL();
 
-	prio = cur_tcb->prio;
-	tcb_exit_rdy(prio);
+	/*
+	 * 调度不一定要把自己exit_rdy
+	 */
+	high_rdy = find_next_task();
+	if (high_rdy != cur_prio)
+	{
+		tcb_high_rdy = tcb_prio_tbl[high_rdy];
 
-	EXIT_CRITICAL();
+		task_sw();
 
-	task_sw();
+		EXIT_CRITICAL();
+
+
+	}
+	//prio = cur_tcb->prio;
+	//tcb_exit_rdy(prio);
+
+	//EXIT_CRITICAL();
+
+	//task_sw();
 
 	debug("%s exit critical\n", __func__);
 
@@ -143,11 +164,10 @@ void schedule(void)
 
 void ctx_sw(void)
 {
-	u8 prio;
 	ucontext_t *ucp;
 
-	prio = find_next_task();
-	cur_tcb = tcb_prio_tbl[prio];
+	cur_prio = high_rdy;
+	cur_tcb = tcb_high_rdy;
 
 	ucp = (ucontext_t *)cur_tcb->stk;
 
@@ -175,11 +195,18 @@ void tcb_enter_rdy(u8 prio)
 	u8 x;
 	u8 y;
 
+
 	x = prio & 0x7;
 	y = (prio >> 3) & 0x7;
 
+	debug("befor prio: %d, rdy_grp: %d, rdy_tbl[%d]: %d\n", prio,
+			rdy_grp, y, rdy_tbl[y]);
+
 	rdy_grp |= map_tbl[y];
 	rdy_tbl[y] |= map_tbl[x];
+
+	debug("after prio: %d, rdy_grp: %d, rdy_tbl[%d]: %d\n", prio,
+			rdy_grp, y, rdy_tbl[y]);
 }
 
 
@@ -189,7 +216,7 @@ int find_next_task(void)
 
 	int i = 0;
 
-	ENTER_CRITICAL();
+//	ENTER_CRITICAL();
 
 #if TASK_CYCLE
 
@@ -221,11 +248,11 @@ int find_next_task(void)
 	u8 prio = (y << 3) | x;
 	i = prio;
 
-	debug("%s prio: %d rdy_grp: %d rdy_tbl: %d\n", __func__, prio, rdy_grp, rdy_tbl[y]);
+	debug("%s prio: %d rdy_grp: %d rdy_tbl[%d]: %d\n", __func__, prio, rdy_grp, y, rdy_tbl[y]);
 
 #endif
 
-	EXIT_CRITICAL();
+//	EXIT_CRITICAL();
 
 
 	return i;
