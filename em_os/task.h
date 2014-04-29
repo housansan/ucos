@@ -42,7 +42,7 @@ struct tcb
 
 	u8 prio;
 	// 使用id来唯一确定task
-	u8 tcb_id;
+	u8 tcb_pid;
 	int time_slice;
 
 	/*
@@ -89,8 +89,6 @@ TASK_EXT struct tcb *tcb_prio_tbl[LOWEST_PRIO + 1];
 // table oftask control block
 TASK_EXT struct tcb tcb_tbl[TASK_NUM];
 
-TASK_EXT int tsk_thread_id;
-
 TASK_EXT sigset_t cpu_sr;
 
 TASK_EXT u8 rdy_grp;
@@ -99,7 +97,7 @@ TASK_EXT u8 rdy_tbl[LOWEST_PRIO/8 + 1];
 
 
 
-extern int task_create(tsk_fn func, int prio, u8 *ptos);
+extern u8 task_create(tsk_fn func, int prio, u8 *ptos);
 
 extern void start_task(void);
 
@@ -108,6 +106,11 @@ extern int find_next_task(void);
 extern u8 task_suspend(u8 prio);
 
 extern u8 task_resume(u8 prio);
+
+extern u8 change_task_prio(u8 old_prio, u8 new_prio);
+
+// TODO 移到合适的位置
+extern u8 general_check_prio(u8 prio);
 
 
 #define HOLD	((struct tcb *)1)

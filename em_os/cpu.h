@@ -17,5 +17,7 @@
 #define task_sw()	{kill(getpid(), SIGUSR1);}
 
 
+extern void linux_init(void);
+
 
 #endif

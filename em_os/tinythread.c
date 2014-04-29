@@ -74,8 +74,7 @@ void tsk_fn2(void)
 
 		if (5 == cnt)
 		{
-			task_resume(0);
-			cnt = 0;
+			time_dly(cnt);
 			printf("%s time_dly back\n", __func__);
 		}
 	}
@@ -85,6 +84,7 @@ void tsk_fn2(void)
 void tsk_fn3(void)
 {
 	int cnt = 0;
+	u8 err = NO_ERR;
 	while(1) 
 	{
 		printf("in the %s cnt = %d\n", __func__, cnt);
@@ -94,89 +94,28 @@ void tsk_fn3(void)
 		printf("come back %s cnt = %d\n", __func__, cnt);
 
 		cnt++;
+
+
+		if (7 == cnt)
+		{
+			err = change_task_prio(2, 0);
+			if (NO_ERR == err)
+			{
+				printf("chang task prio success new_prio: %d\n", 0);
+			}
+		}
 	}
 }
 
-
-
-
-
-/*
- * 1. save current ucontext
- * 2. 
- */
-void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
-{
-	ucontext_t *ucp;
-	printf("enter %s\n", __func__);
-	
-	if ((((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] >= (unsigned int)setcontext) &&
-			(((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] < (unsigned int)(setcontext + 110))) {
-		fprintf(stderr, "sig timer: thread interrupted in setcontext\n");
-		return;
-	}
-	if (((ucontext_t*)uc)->uc_mcontext.fpregs == 0) {
-		fprintf(stderr, "sig timer: uc->uc_mcontext.fpregs == 0\n");
-		return;
-	}
-
-	time_tick();
-
-	high_rdy = find_next_task();
-	if (high_rdy == cur_prio)
-	{
-		return;
-	}
-
-
-	cur_tcb->stk = uc;
-	
-	cur_prio = high_rdy;
-	cur_tcb = tcb_high_rdy = tcb_prio_tbl[cur_prio];
-
-	ucp = (ucontext_t *)cur_tcb->stk;
-
-	setcontext(ucp);
-}
-
-
-void ctx_sw_sig_handler(int signo, siginfo_t *info, void *uc)
-{
-	cur_tcb->stk = uc;
-	ctx_sw();
-}
-
-
-void sig_init(void)
-{
-	struct sigaction act;
-	act.sa_flags = SA_SIGINFO;
-	sigemptyset(&act.sa_mask);
-	act.sa_sigaction = time_tick_sig_handler;
-	sigaction(SIGALRM, &act, NULL);
-
-	act.sa_flags = SA_SIGINFO;
-	sigemptyset(&act.sa_mask);
-	act.sa_sigaction = ctx_sw_sig_handler;
-	sigaction(SIGUSR1, &act, NULL);
-}
-
-
-void alrm_init(void)
-{
-	useconds_t usec = 100000;
-	ualarm(usec, usec);
-}
 
 
 int main(int argc, char *argv[])
 {
 	int i = 0;
-	sig_init();
 
-	tcb_head_init();
+	os_init();
 
-	task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
+	//task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
 	task_create(tsk_fn2, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
 	task_create(tsk_fn3, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
 
@@ -185,7 +124,7 @@ int main(int argc, char *argv[])
 		debug("prio: %d, time_slice: %d\n", i, tcb_tbl[i].time_slice);
 	}
 
-	alrm_init();
+	linux_init();
 	start_task();
 
 	return 0;

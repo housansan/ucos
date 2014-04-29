@@ -15,6 +15,11 @@
 #define TASK_PRIORITY		1
 
 
+#define TICKS_PER_SEC		(10u)
+
+#define EVENT_TBL_SIZE		(LOWEST_PRIO)
+
+
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;

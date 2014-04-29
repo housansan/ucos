@@ -27,6 +27,38 @@ void time_dly(int ticks)
 }
 
 
+
+/*
+ * 取消 延时
+ */
+u8 time_dly_resume(u8 prio)
+{
+	struct tcb *ptcb;
+	u8 err = NO_ERR;
+
+	err = general_check_prio(prio);
+	if (NO_ERR != err)
+	{
+		goto fail;
+	}
+
+	ENTER_CRITICAL();
+
+	ptcb = tcb_prio_tbl[prio];
+
+	// check
+	
+	ptcb->delay = 0;
+
+	EXIT_CRITICAL();
+
+	schedule();
+
+fail:
+	return err;
+}
+
+
 /*
  * ticks
  */

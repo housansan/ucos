@@ -77,42 +77,68 @@ void tcb_head_init(void)
 
 
 /*
+ * TODO: 建立空闲任务
+ */
+void os_init(void)
+{
+	tcb_head_init();
+}
+
+
+/*
  * 遍历 tcb_head 将delay--
  * 注意 tcb 的 stat 要是就绪状态
  */
 void time_tick(void)
 {
 	struct tcb *ptcb;
-	int dly;
 	u8 prio;
 
-	ENTER_CRITICAL();
+	//ENTER_CRITICAL();
 	
-	jiffies++;
 
+	/*
+	 * FIXME: 
+	 * 1. 会把空闲idle_task也的delay
+	 * 2. task suspend 将不能进入 rdy
+	 */
 	list_for_each_entry(ptcb, tcb_rdy_head, list)
 	{
-		dly = ptcb->delay;
 		prio = ptcb->prio;
-		if (dly > 0)
+		if (ptcb->delay > 0)
 		{
-			dly--;
-			ptcb->delay = dly;
-			if (0 == dly)
+			if (0 == --ptcb->delay)
 			{
-				tcb_enter_rdy(prio);
+				/*
+				 * Q: why 不直接 TASK_RDY == ptcb->stat
+				 * A: 可能有其他 status
+				 *
+				 */
+				if (TASK_RDY == (ptcb->stat & TASK_SUSPEND))
+				{
+					tcb_enter_rdy(prio);
+				}
 			}
-			debug("%s prio: %d dly: %d\n", __func__, prio, dly);
+			debug("%s prio: %d dly: %d\n", __func__, prio, ptcb->delay);
 		}
 
 	}
 
-	EXIT_CRITICAL();
+	jiffies++;
+	//EXIT_CRITICAL();
 }
 
 
 void int_ctx_sw(void)
 {
+	high_rdy = find_next_task();
+	if (high_rdy == cur_prio)
+	{
+		return;
+	}
+
+	tcb_high_rdy = tcb_prio_tbl[high_rdy];
+
 	ctx_sw();
 }
 
@@ -140,6 +166,11 @@ void schedule(void)
 	 * 调度不一定要把自己exit_rdy
 	 */
 	high_rdy = find_next_task();
+	/*
+	 * why 比较 high_rdy != cur_prio
+	 * 而不比较 tcb_high_rdy != cur_tcb
+	 * 这是因为在一些 8bit 和 16bit 比较慢
+	 */
 	if (high_rdy != cur_prio)
 	{
 		tcb_high_rdy = tcb_prio_tbl[high_rdy];
@@ -158,7 +189,6 @@ void schedule(void)
 	//task_sw();
 
 	debug("%s exit critical\n", __func__);
-
 }
 
 
@@ -175,7 +205,7 @@ void ctx_sw(void)
 }
 
 
-void tcb_exit_rdy(u8 prio)
+static inline void tcb_exit_tbl(u8 *grp, u8 tbl[], u8 prio)
 {
 	u8 x;
 	u8 y;
@@ -183,34 +213,54 @@ void tcb_exit_rdy(u8 prio)
 	x = prio & 0x7;
 	y = (prio >> 3) & 0x7;
 
-	if (0 == (rdy_tbl[y] &= ~(map_tbl[x])))
+	if (0 == (tbl[y] &= ~(map_tbl[x])))
 	{
-		rdy_grp &= ~(map_tbl[y]);
+		*grp &= ~(tbl[y]);
 	}
+}
+
+
+static inline void tcb_enter_tbl(u8 *grp, u8 tbl[], u8 prio)
+{
+	u8 x;
+	u8 y;
+
+	x = prio & 0x7;
+	y = (prio >> 3) & 0x7;
+
+	*grp |= map_tbl[y];
+	tbl[y] |= map_tbl[x];
+}
+
+
+void tcb_exit_rdy(u8 prio)
+{
+	tcb_exit_tbl(&rdy_grp, rdy_tbl, prio);
 }
 
 
 void tcb_enter_rdy(u8 prio)
 {
-	u8 x;
-	u8 y;
+	tcb_enter_tbl(&rdy_grp, rdy_tbl, prio);
+}
 
 
-	x = prio & 0x7;
-	y = (prio >> 3) & 0x7;
+void tcb_exit_wait(u8 *grp, u8 tbl[], u8 prio)
+{
+	tcb_exit_tbl(grp, tbl, prio);
+}
 
-	debug("befor prio: %d, rdy_grp: %d, rdy_tbl[%d]: %d\n", prio,
-			rdy_grp, y, rdy_tbl[y]);
 
-	rdy_grp |= map_tbl[y];
-	rdy_tbl[y] |= map_tbl[x];
-
-	debug("after prio: %d, rdy_grp: %d, rdy_tbl[%d]: %d\n", prio,
-			rdy_grp, y, rdy_tbl[y]);
+void tcb_enter_wait(u8 *grp, u8 tbl[], u8 prio)
+{
+	tcb_enter_wait(grp, tbl, prio);
 }
 
 
 
+/*
+ * 需要调用者使用 ENTER_CRITICAL EXIT_CRITICAL
+ */
 int find_next_task(void)
 {
 
@@ -221,7 +271,7 @@ int find_next_task(void)
 #if TASK_CYCLE
 
 
-	i = tsk_thread_id;
+	i = cur_prio;
 	i++;
 	i %= TASK_NUM;
 
@@ -256,4 +306,30 @@ int find_next_task(void)
 
 
 	return i;
+}
+
+
+u8 find_next_wait_task(u8 *grp, u8 tbl[])
+{
+	u8 y = unmap_tbl[*grp];
+	u8 x = unmap_tbl[tbl[y]];
+	u8 prio = (y << 3) | x;
+
+	return prio;
+}
+
+
+/*u8 find_next_task(u8 *grp, u8 tbl[])*/
+//{
+	//u8 y = unmap_tbl[*grp];
+	//u8 x = unmap_tbl[tbl[y]];
+	//u8 prio = (y << 3) | x;
+
+	//return prio;
+/*}*/
+
+
+u16 version(void)
+{
+	return (OS_VERSION);
 }
