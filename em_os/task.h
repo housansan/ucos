@@ -101,7 +101,6 @@ extern u8 task_create(tsk_fn func, int prio, u8 *ptos);
 
 extern void start_task(void);
 
-extern int find_next_task(void);
 
 extern u8 task_suspend(u8 prio);
 

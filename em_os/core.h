@@ -14,6 +14,10 @@ extern void tcb_entry_wait(u8 *grp, u8 tbl[], u8 prio);
 extern void task_enter_rdy(struct tcb *ptcb, u8 prio);
 extern void task_exit_rdy(struct tcb *ptcb, u8 prio);
 
+
+extern int find_next_task(void);
+extern u8 find_next_wait_task(u8 *grp, u8 tbl[]);
+
 extern void schedule(void);
 extern void ctx_sw(void);
 extern void tick_isr(void);
