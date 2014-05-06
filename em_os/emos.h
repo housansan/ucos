@@ -22,6 +22,8 @@
 
 #include "event.h"
 
+#include "pc.h"
+
 
 #define DEBUG
 

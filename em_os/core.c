@@ -1,3 +1,7 @@
+
+
+#define EVENT_GLOBAL
+
 #include "emos.h"
 
 
@@ -31,7 +35,7 @@ static const u8 unmap_tbl[] = {
 };
 
 
-void mem_clr(void *ptr, int len)
+void mem_clr(void *ptr, u32 len)
 {
 	int i = 0;
 	char *mptr = ptr;
@@ -60,6 +64,7 @@ void tcb_head_init(void)
 	tcb_rdy_head = &rdy_head;
 	tcb_dly_head = &dly_head;
 
+
 	// tcb_tbl[i] = 0;
 	mem_clr(&tcb_tbl[0], sizeof(tcb_tbl));
 
@@ -72,6 +77,13 @@ void tcb_head_init(void)
 	{
 		list_add(&tcb_tbl[i].list, tcb_free_head);
 	}
+
+	event_free_head = &event_tbl[0];
+	for (i = 0; i < MAX_EVENTS - 1; ++i)
+	{
+		event_tbl[i].event_ptr = &event_tbl[i+1];
+	}
+	event_tbl[MAX_EVENTS - 1].event_ptr = NULL;
 
 }
 
@@ -110,11 +122,11 @@ void time_tick(void)
 			if (0 == --ptcb->delay)
 			{
 				/*
-				 * Q: why 不直接 TASK_RDY == ptcb->stat
+				 * Q: why 不直接 TASK_STAT_RDY == ptcb->stat
 				 * A: 可能有其他 status
 				 *
 				 */
-				if (TASK_RDY == (ptcb->stat & TASK_SUSPEND))
+				if (TASK_STAT_RDY == (ptcb->stat & TASK_STAT_SUSPEND))
 				{
 					tcb_enter_rdy(prio);
 				}
@@ -217,6 +229,7 @@ static inline void tcb_exit_tbl(u8 *grp, u8 tbl[], u8 prio)
 	{
 		*grp &= ~(tbl[y]);
 	}
+
 }
 
 
@@ -247,13 +260,16 @@ void tcb_enter_rdy(u8 prio)
 
 void tcb_exit_wait(u8 *grp, u8 tbl[], u8 prio)
 {
+	//prio = find_next_wait_task(grp, tbl);
+	tcb_enter_rdy(prio);
 	tcb_exit_tbl(grp, tbl, prio);
 }
 
 
 void tcb_enter_wait(u8 *grp, u8 tbl[], u8 prio)
 {
-	tcb_enter_wait(grp, tbl, prio);
+	tcb_exit_rdy(prio);
+	tcb_enter_tbl(grp, tbl, prio);
 }
 
 
@@ -309,9 +325,9 @@ int find_next_task(void)
 }
 
 
-u8 find_next_wait_task(u8 *grp, u8 tbl[])
+u8 find_next_wait_task(u8 grp, u8 tbl[])
 {
-	u8 y = unmap_tbl[*grp];
+	u8 y = unmap_tbl[grp];
 	u8 x = unmap_tbl[tbl[y]];
 	u8 prio = (y << 3) | x;
 

@@ -51,6 +51,7 @@ struct tcb
 	 * 3. sleep
 	 */
 	u8 stat;
+	u8 pend_to; // flag indicating PEND time out
 
 	// sleep time
 	int delay;
@@ -115,8 +116,12 @@ extern u8 general_check_prio(u8 prio);
 #define HOLD	((struct tcb *)1)
 
 
-#define TASK_RDY	0
-#define TASK_SUSPEND	(1 << 1)
+// task status
+#define TASK_STAT_RDY		0
+// time_dly 中设置
+// 当 
+#define TASK_STAT_SUSPEND	(1 << 1)
+#define TASK_STAT_SEM		(1 << 2)
 
 
 #define PRIO_SELF		(0xff)

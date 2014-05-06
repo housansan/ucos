@@ -260,7 +260,7 @@ u8 task_suspend(u8 prio)
 		goto task_no_exist;
 	}
 
-	ptcb->stat |= TASK_SUSPEND;
+	ptcb->stat |= TASK_STAT_SUSPEND;
 
 	tcb_exit_rdy(prio);
 
@@ -302,12 +302,12 @@ u8 task_resume(u8 prio)
 	}
 
 	/*
-	 * task 必须要有 TASK_SUSPEND
+	 * task 必须要有 TASK_STAT_SUSPEND
 	 */
-	if (TASK_RDY != (ptcb->stat & TASK_SUSPEND))
+	if (TASK_STAT_RDY != (ptcb->stat & TASK_STAT_SUSPEND))
 	{
-		ptcb->stat &= ~TASK_SUSPEND;
-		if (TASK_RDY == ptcb->stat)
+		ptcb->stat &= ~TASK_STAT_SUSPEND;
+		if (TASK_STAT_RDY == ptcb->stat)
 		{
 			if (ptcb->delay == 0)
 			{

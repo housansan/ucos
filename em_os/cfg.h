@@ -17,7 +17,8 @@
 
 #define TICKS_PER_SEC		(10u)
 
-#define EVENT_TBL_SIZE		(LOWEST_PRIO)
+#define EVENT_TBL_SIZE		(LOWEST_PRIO + 1)
+#define MAX_EVENTS			(10)
 
 
 typedef unsigned char u8;

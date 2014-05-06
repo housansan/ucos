@@ -21,6 +21,7 @@ static u8 tsk_stk1[TASK_STK_SIZE];
 static u8 tsk_stk2[TASK_STK_SIZE];
 static u8 tsk_stk3[TASK_STK_SIZE];
 
+static struct event *pevent;
 
 
 
@@ -36,6 +37,7 @@ void delay(int n)
 void tsk_fn1(void)
 {
 	int cnt = 0;
+	u8 err;
 	while(1) 
 	{
 		ENTER_CRITICAL();
@@ -51,7 +53,16 @@ void tsk_fn1(void)
 
 		if (10 == cnt)
 		{
-			task_suspend(PRIO_SELF);
+			err = down(pevent);
+			if (ERR_TIME_OUT == err)
+			{
+				printf("down semaphore time out\n");
+			}
+			else 
+			{
+				printf("get semaphore\n");
+			}
+			//task_suspend(PRIO_SELF);
 			cnt = 0;
 			printf("%s jiffies %d\n", __func__, time_get());
 		}
@@ -74,7 +85,7 @@ void tsk_fn2(void)
 
 		if (5 == cnt)
 		{
-			time_dly(cnt);
+			up(pevent);
 			printf("%s time_dly back\n", __func__);
 		}
 	}
@@ -108,6 +119,12 @@ void tsk_fn3(void)
 }
 
 
+void sigint(int signum)
+{
+	printf("sigint signum: %d\n", SIGINT);
+	up(pevent);
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -115,14 +132,18 @@ int main(int argc, char *argv[])
 
 	os_init();
 
-	//task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
+	task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
 	task_create(tsk_fn2, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
-	task_create(tsk_fn3, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
+	//task_create(tsk_fn3, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
 
 	for (i = 0; i < TASK_NUM; ++i)
 	{
 		debug("prio: %d, time_slice: %d\n", i, tcb_tbl[i].time_slice);
 	}
+
+	pevent = sem_create(2);
+
+	signal(SIGINT, sigint);
 
 	linux_init();
 	start_task();

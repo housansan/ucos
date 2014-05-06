@@ -15,5 +15,10 @@
 #define ERR_TASK_HOLD				(7u)
 #define ERR_CHANGE_IDLE_PRIO		(8u)
 
+#define ERR_SEM_OVF					(9u)
+#define ERR_PEVENT_NULL				(10u)
+#define ERR_EVENT_TYPE				(11u)
+#define ERR_TIME_OUT				(12u)
+
 
 #endif
