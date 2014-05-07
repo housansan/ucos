@@ -1,6 +1,7 @@
 
 
 #define EVENT_GLOBAL
+#define CORE_GLOBAL
 
 #include "emos.h"
 
@@ -37,7 +38,7 @@ static const u8 unmap_tbl[] = {
 
 void mem_clr(void *ptr, u32 len)
 {
-	int i = 0;
+	u32 i = 0;
 	char *mptr = ptr;
 	for (i = 0; i < len; ++i)
 	{
@@ -88,12 +89,41 @@ void tcb_head_init(void)
 }
 
 
+// 空闲 task
+static void task_idle(void)
+{
+	while(1) 
+	{
+		ENTER_CRITICAL();
+
+		idle_ctr++;
+
+		EXIT_CRITICAL();
+
+//		task_idle_hook();
+	}
+}
+
+
+static void task_idle_init(void)
+{
+	task_create(task_idle, LOWEST_PRIO, &task_idle_stk[TASK_IDLE_STK_SIZE - 1]);
+}
+
+
+static void task_stat_init(void)
+{
+	/* code */
+}
+
+
 /*
  * TODO: 建立空闲任务
  */
 void os_init(void)
 {
 	tcb_head_init();
+	task_idle_init();
 }
 
 
@@ -190,8 +220,6 @@ void schedule(void)
 		task_sw();
 
 		EXIT_CRITICAL();
-
-
 	}
 	//prio = cur_tcb->prio;
 	//tcb_exit_rdy(prio);
@@ -225,11 +253,11 @@ static inline void tcb_exit_tbl(u8 *grp, u8 tbl[], u8 prio)
 	x = prio & 0x7;
 	y = (prio >> 3) & 0x7;
 
-	if (0 == (tbl[y] &= ~(map_tbl[x])))
-	{
-		*grp &= ~(tbl[y]);
-	}
 
+	if (0 == (tbl[y] &= ~map_tbl[x]))
+	{
+		*grp &= ~map_tbl[y];
+	}
 }
 
 

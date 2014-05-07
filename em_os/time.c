@@ -18,7 +18,7 @@ void time_dly(int ticks)
 
 		//list_add(&cur_tcb->list, tcb_dly_head);
 
-		debug("prio: %d, ticks: %d\n", cur_tcb->prio, ticks);
+		debug("prio: %d, ticks: %d, rdy_grp: %d, rdy_tbl[0]: %d\n", cur_tcb->prio, ticks, rdy_grp, rdy_tbl[0]);
 
 		EXIT_CRITICAL();
 

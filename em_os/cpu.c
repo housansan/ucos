@@ -14,7 +14,7 @@ static void ctx_sw_sig_handler(int signo, siginfo_t *info, void *uc)
  */
 static void time_tick_sig_handler(int signo, siginfo_t *info, void *uc)
 {
-	printf("enter %s\n", __func__);
+	debug("enter %s\n", __func__);
 	
 	if ((((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] >= (unsigned int)setcontext) &&
 			(((ucontext_t*)uc)->uc_mcontext.gregs[REG_EIP] < (unsigned int)(setcontext + 110))) {

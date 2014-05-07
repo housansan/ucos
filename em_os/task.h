@@ -98,6 +98,7 @@ TASK_EXT u8 rdy_tbl[LOWEST_PRIO/8 + 1];
 
 
 
+
 extern u8 task_create(tsk_fn func, int prio, u8 *ptos);
 
 extern void start_task(void);
@@ -119,9 +120,16 @@ extern u8 general_check_prio(u8 prio);
 // task status
 #define TASK_STAT_RDY		0
 // time_dly 中设置
-// 当 
+// 任务处于 挂起 
 #define TASK_STAT_SUSPEND	(1 << 1)
+// task 等待 semaphore
 #define TASK_STAT_SEM		(1 << 2)
+// task wait mbox
+#define TASK_STAT_MBOX		(1 << 3)
+// task wait queue
+#define TASK_STAT_Q			(1 << 4)
+// task wait mutex
+#define TASK_STAT_MUTEX		(1 << 5)
 
 
 #define PRIO_SELF		(0xff)

@@ -34,60 +34,80 @@ void delay(int n)
 }
 
 
-void tsk_fn1(void)
+void task_idle(void)
 {
-	int cnt = 0;
-	u8 err;
 	while(1) 
 	{
 		ENTER_CRITICAL();
-		printf("in the %s cnt = %d\n", __func__, cnt);
+
+		idle_ctr++;
+
 		EXIT_CRITICAL();
-		// ...
-		sleep(5);
-
-		ENTER_CRITICAL();
-		printf("come back %s cnt = %d\n", __func__, cnt);
-		EXIT_CRITICAL();
-		cnt++;
-
-		if (10 == cnt)
-		{
-			err = down(pevent);
-			if (ERR_TIME_OUT == err)
-			{
-				printf("down semaphore time out\n");
-			}
-			else 
-			{
-				printf("get semaphore\n");
-			}
-			//task_suspend(PRIO_SELF);
-			cnt = 0;
-			printf("%s jiffies %d\n", __func__, time_get());
-		}
-
 	}
 }
 
 
+/*
+ * 在 terminal 上显示随机数字
+ */
+void tsk_fn1(void)
+{
+	int cnt = 0;
+	u8 row = 80;
+	u8 col = 24;
+	u8 x = 10;
+	u8 y = 0;
+	u8 err;
+
+	u8 fg;
+	u8 bg;
+
+	u8 num = 0;
+
+	col -= 5;
+
+	pc_dispclrstr();
+	pc_dispstr(x, y, "uC/OS-II, The Real-Time Kernel\n", WHITE, RED);
+
+	while(1) 
+	{
+		x = my_random(row);
+		y = my_random(col);
+		y += 5;
+
+		fg = my_random(7);
+		bg = my_random(7);
+
+		num = my_random(9);
+
+		pc_dispchar(x, y, num + '0', fg, bg);
+	}
+}
+
+/*
+ * show 'M'
+ */
 void tsk_fn2(void)
 {
 	int cnt = 0;
+	int x;
+	int y;
+	u8 c = 'M';
+	pc_dispclrstr();
+
 	while(1) 
 	{
-		printf("in the %s cnt = %d\n", __func__, cnt);
-
-		sleep(2);
-
-		printf("come back %s cnt = %d\n", __func__, cnt);
-		cnt++;
-
-		if (5 == cnt)
+		if (x > 10)
 		{
-			up(pevent);
-			printf("%s time_dly back\n", __func__);
+			x = 0;
+			y += 2;
 		}
+
+		pc_dispchar(x, y, c, BLACK, WHITE);
+
+		x += 1;
+
+		time_dly(3);
 	}
 }
 
@@ -132,7 +152,7 @@ int main(int argc, char *argv[])
 
 	os_init();
 
-	task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
+	//task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
 	task_create(tsk_fn2, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
 	//task_create(tsk_fn3, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
 
@@ -141,9 +161,9 @@ int main(int argc, char *argv[])
 		debug("prio: %d, time_slice: %d\n", i, tcb_tbl[i].time_slice);
 	}
 
-	pevent = sem_create(2);
+	disp_str_sem = sem_create(1);
 
-	signal(SIGINT, sigint);
+	//signal(SIGINT, sigint);
 
 	linux_init();
 	start_task();

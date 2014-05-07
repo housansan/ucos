@@ -1,6 +1,12 @@
 #ifndef _CORE_H
 #define _CORE_H
 
+#ifdef CORE_GLOBAL
+#define CORE_EXT
+#else
+#define CORE_EXT	extern
+#endif
+
 #include "cfg.h"
 
 
@@ -29,6 +35,16 @@ extern void os_init(void);
 extern void mem_clr(void *ptr, u32 len);
 
 
+#define TASK_IDLE_STK_SIZE		(10240)
 #define OS_VERSION		(100)
+
+
+// 用于统计空闲任务
+CORE_EXT u32 idle_ctr;
+CORE_EXT u8 task_idle_stk[TASK_IDLE_STK_SIZE];
+
+
+
+
 
 #endif
