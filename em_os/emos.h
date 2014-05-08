@@ -25,7 +25,7 @@
 #include "pc.h"
 
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define debug(fmt, arg...)	printf("DEBUG - " fmt, ##arg)

@@ -11,7 +11,6 @@ LIST_HEAD(rdy_head);
 LIST_HEAD(dly_head);
 
 
-
 static const u8 map_tbl[] = {
 	1, 2, 4, 8, 16, 32, 64, 128,
 };
@@ -111,6 +110,10 @@ static void task_idle_init(void)
 }
 
 
+/*
+ * 统计 task
+ * Q: 怎么统计任务
+ */
 static void task_stat_init(void)
 {
 	/* code */
@@ -173,7 +176,7 @@ void time_tick(void)
 
 void int_ctx_sw(void)
 {
-	high_rdy = find_next_task();
+	high_rdy = find_next_rdy_task();
 	if (high_rdy == cur_prio)
 	{
 		return;
@@ -207,7 +210,7 @@ void schedule(void)
 	/*
 	 * 调度不一定要把自己exit_rdy
 	 */
-	high_rdy = find_next_task();
+	high_rdy = find_next_rdy_task();
 	/*
 	 * why 比较 high_rdy != cur_prio
 	 * 而不比较 tcb_high_rdy != cur_tcb
@@ -304,56 +307,59 @@ void tcb_enter_wait(u8 *grp, u8 tbl[], u8 prio)
 
 /*
  * 需要调用者使用 ENTER_CRITICAL EXIT_CRITICAL
+ * TODO: 使用 find_next_task
+ * find_next_rdy_task
+ * find_next_wait_task
  */
-int find_next_task(void)
-{
+//int find_next_task(void)
+//{
 
-	int i = 0;
+	//int i = 0;
 
-//	ENTER_CRITICAL();
+////	ENTER_CRITICAL();
 
-#if TASK_CYCLE
-
-
-	i = cur_prio;
-	i++;
-	i %= TASK_NUM;
+//#if TASK_CYCLE
 
 
-#elif TASK_PRIORITY
-
-	//for (i = TASK_NUM - 1; i >= 0; --i)
-	//{
-		//if (0 != tcb_tbl[i].time_slice)
-		//{
-			//tcb_tbl[i].time_slice--;
-			//break;
-		//}
-	//}
-
-	//if (i < 0)
-	//{
-		//i = 0;
-	//}
-
-	// 选出最高优先级
-	u8 y = unmap_tbl[rdy_grp];
-	u8 x = unmap_tbl[rdy_tbl[y]];
-	u8 prio = (y << 3) | x;
-	i = prio;
-
-	debug("%s prio: %d rdy_grp: %d rdy_tbl[%d]: %d\n", __func__, prio, rdy_grp, y, rdy_tbl[y]);
-
-#endif
-
-//	EXIT_CRITICAL();
+	//i = cur_prio;
+	//i++;
+	//i %= TASK_NUM;
 
 
-	return i;
-}
+//#elif TASK_PRIORITY
+
+	////for (i = TASK_NUM - 1; i >= 0; --i)
+	////{
+		////if (0 != tcb_tbl[i].time_slice)
+		////{
+			////tcb_tbl[i].time_slice--;
+			////break;
+		////}
+	////}
+
+	////if (i < 0)
+	////{
+		////i = 0;
+	////}
+
+	//// 选出最高优先级
+	//u8 y = unmap_tbl[rdy_grp];
+	//u8 x = unmap_tbl[rdy_tbl[y]];
+	//u8 prio = (y << 3) | x;
+	//i = prio;
+
+	//debug("%s prio: %d rdy_grp: %d rdy_tbl[%d]: %d\n", __func__, prio, rdy_grp, y, rdy_tbl[y]);
+
+//#endif
+
+////	EXIT_CRITICAL();
 
 
-u8 find_next_wait_task(u8 grp, u8 tbl[])
+	//return i;
+//}
+
+
+static u8 find_next_task(u8 grp, u8 tbl[])
 {
 	u8 y = unmap_tbl[grp];
 	u8 x = unmap_tbl[tbl[y]];
@@ -363,14 +369,18 @@ u8 find_next_wait_task(u8 grp, u8 tbl[])
 }
 
 
-/*u8 find_next_task(u8 *grp, u8 tbl[])*/
-//{
-	//u8 y = unmap_tbl[*grp];
-	//u8 x = unmap_tbl[tbl[y]];
-	//u8 prio = (y << 3) | x;
 
-	//return prio;
-/*}*/
+u8 find_next_wait_task(u8 grp, u8 tbl[])
+{
+	return (find_next_task(grp, tbl));
+}
+
+
+int find_next_rdy_task(void)
+{
+	return (find_next_task(rdy_grp, rdy_tbl));
+}
+
 
 
 u16 version(void)

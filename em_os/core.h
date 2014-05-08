@@ -21,7 +21,7 @@ extern void task_enter_rdy(struct tcb *ptcb, u8 prio);
 extern void task_exit_rdy(struct tcb *ptcb, u8 prio);
 
 
-extern int find_next_task(void);
+extern int find_next_rdy_task(void);
 extern u8 find_next_wait_task(u8 grp, u8 tbl[]);
 
 extern void schedule(void);

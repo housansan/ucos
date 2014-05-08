@@ -147,6 +147,9 @@ u8 task_create(tsk_fn func, int prio, u8 *ptos)
 	// 添加到 tcb_head 进行管理
 	tcb_manage(ptcb);
 
+	// 创建 task 如果有task 已经运行了
+	// 那么创建好任务后
+
 	return NO_ERR;
 
 
@@ -191,7 +194,7 @@ void start_task(void)
 {
 	ucontext_t *ucp;
 
-	cur_prio = find_next_task();
+	cur_prio = find_next_rdy_task();
 
 	debug("%s %d\n", __func__, cur_prio);
 

@@ -90,10 +90,11 @@ void tsk_fn1(void)
 void tsk_fn2(void)
 {
 	int cnt = 0;
-	int x;
-	int y;
+	int x = 0;
+	int y = 0;
 	u8 c = 'M';
-	pc_dispclrstr();
+	//pc_dispclrstr();
+	task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
 
 	while(1) 
 	{
