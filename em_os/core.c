@@ -197,7 +197,7 @@ void stat_init(void)
 static void misc_init(void)
 {
 	lock_nesting = 0;
-	os_running = 0;
+	os_running = FALSE;
 	idle_ctr = 0;
 
 #if TASK_STAT_EN
@@ -239,6 +239,11 @@ void time_tick(void)
 {
 	struct tcb *ptcb;
 	u8 prio;
+
+	if (FALSE == os_running)
+	{
+		return ;
+	}
 
 	//ENTER_CRITICAL();
 	

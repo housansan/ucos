@@ -149,6 +149,10 @@ u8 task_create(tsk_fn func, int prio, u8 *ptos)
 
 	// 创建 task 如果有task 已经运行了
 	// 那么创建好任务后
+	if (TRUE == os_running)
+	{
+		schedule();
+	}
 
 	return NO_ERR;
 
@@ -194,6 +198,11 @@ void start_task(void)
 {
 	ucontext_t *ucp;
 
+	if (TRUE == os_running)
+	{
+		return;
+	}
+
 	cur_prio = find_next_rdy_task();
 
 	debug("%s %d\n", __func__, cur_prio);
@@ -204,6 +213,8 @@ void start_task(void)
 	tcb_high_rdy = cur_tcb;
 
 	ucp = (ucontext_t *)cur_tcb->stk;
+
+	os_running = TRUE;
 
 	setcontext(ucp);
 }
