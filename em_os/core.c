@@ -93,6 +93,7 @@ static void task_idle(void)
 {
 	while(1) 
 	{
+
 		ENTER_CRITICAL();
 
 		idle_ctr++;
@@ -110,23 +111,123 @@ static void task_idle_init(void)
 }
 
 
-/*
- * 统计 task
- * Q: 怎么统计任务
- */
+static void task_stat(void)
+{
+	u32 run;
+	u8 usage;
+
+	while(FALSE == stat_rdy) 
+	{
+		time_dly(2 * TICKS_PER_SEC);
+	}
+
+	while(1) 
+	{
+		ENTER_CRITICAL();
+
+		//idle_ctr_run = idle_ctr;
+		run = idle_ctr;
+		idle_ctr = 0;
+
+		EXIT_CRITICAL();
+
+		if (idle_ctr_max > 0)
+		{
+			usage = (u8)(100L - 100L * run / idle_ctr_max);
+			debug("%d, run: %d\n", usage, run);
+			if (usage > 100)
+			{
+				cpu_usage = 100;
+			}
+			else if (usage < 0)
+			{
+				cpu_usage = 0;
+			}
+			else 
+			{
+				cpu_usage = usage;
+			}
+		}
+		else 
+		{
+			cpu_usage = 0;
+		}
+
+		time_dly(TICKS_PER_SEC);
+	}
+}
+
+
 static void task_stat_init(void)
 {
-	/* code */
+	task_create(task_stat, LOWEST_PRIO - 1, &task_stat_stk[TASK_IDLE_STK_SIZE - 1]);
 }
 
 
 /*
- * TODO: 建立空闲任务
+ * 统计 task init
+ * 被其他 task 调用
+ * Q: 怎么统计任务
+ * A: 当空闲任务 idle_ctr 越大时那么显然 cpu_usage 利用率越小
+ * 这里关键以什么为基准? 来计算利用率. 
+ */
+void stat_init(void)
+{
+	// 延迟是为了与时钟节拍同步
+	// 这是恰好时 task_stat 运行
+	time_dly(2);
+
+	ENTER_CRITICAL();
+
+	idle_ctr = 0;
+
+	EXIT_CRITICAL();
+
+	time_dly(TICKS_PER_SEC);
+
+	ENTER_CRITICAL();
+
+	idle_ctr_max = idle_ctr;
+	stat_rdy = TRUE;
+
+	EXIT_CRITICAL();
+}
+
+
+static void misc_init(void)
+{
+	lock_nesting = 0;
+	os_running = 0;
+	idle_ctr = 0;
+
+#if TASK_STAT_EN
+
+	idle_ctr_max = 0;
+	stat_rdy = FALSE;
+
+#endif
+
+}
+
+
+/*
+ * TODO: 建立空闲任务 -- √
  */
 void os_init(void)
 {
 	tcb_head_init();
+	misc_init();
+
+	// 空闲任务
 	task_idle_init();
+
+#if TASK_STAT_EN
+
+	// 统计任务
+	task_stat_init();
+
+#endif
+
 }
 
 
@@ -193,6 +294,43 @@ void tick_isr(void)
 {
 	time_tick();
 	int_ctx_sw();
+}
+
+
+/*
+ * schedule lock
+ * Q. why 需要 schedule lock
+ * A. 
+ */
+void sched_lock(void)
+{
+	if (os_running)
+	{
+		ENTER_CRITICAL();
+
+		lock_nesting++;
+
+		EXIT_CRITICAL();
+	}
+}
+
+
+/*
+ * TODO: 完成sched_unlock 函数
+ */
+void sched_unlock(void)
+{
+	if (os_running)
+	{
+		ENTER_CRITICAL();
+
+		if (lock_nesting > 0)
+		{
+			lock_nesting--;
+		}
+
+		EXIT_CRITICAL();
+	}
 }
 
 

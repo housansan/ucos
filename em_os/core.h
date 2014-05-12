@@ -34,6 +34,8 @@ extern void os_init(void);
 
 extern void mem_clr(void *ptr, u32 len);
 
+extern void stat_init();
+
 
 #define TASK_IDLE_STK_SIZE		(10240)
 #define OS_VERSION		(100)
@@ -41,7 +43,13 @@ extern void mem_clr(void *ptr, u32 len);
 
 // 用于统计空闲任务
 CORE_EXT u32 idle_ctr;
+CORE_EXT u32 idle_ctr_max;
 CORE_EXT u8 task_idle_stk[TASK_IDLE_STK_SIZE];
+CORE_EXT u8 task_stat_stk[TASK_IDLE_STK_SIZE];
+CORE_EXT u32 lock_nesting;
+// 统计 task 状态
+CORE_EXT u8 stat_rdy;
+CORE_EXT u8 cpu_usage;
 
 
 

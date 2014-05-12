@@ -67,7 +67,7 @@ void tsk_fn1(void)
 	col -= 5;
 
 	pc_dispclrstr();
-	pc_dispstr(x, y, "uC/OS-II, The Real-Time Kernel\n", WHITE, RED);
+	pc_dispstr(x, y, "uC/OS-II, The Real-Time Kernel\n", COLOR_WHITE, COLOR_RED);
 
 	while(1) 
 	{
@@ -104,7 +104,7 @@ void tsk_fn2(void)
 			y += 2;
 		}
 
-		pc_dispchar(x, y, c, BLACK, WHITE);
+		pc_dispchar(x, y, c, COLOR_BLACK, COLOR_WHITE);
 
 		x += 1;
 
@@ -113,29 +113,30 @@ void tsk_fn2(void)
 }
 
 
+/*
+ * 测试 统计任务
+ */
 void tsk_fn3(void)
 {
 	int cnt = 0;
 	u8 err = NO_ERR;
+	u32 ticks = 20;
+	char str[64];
+
+	//pc_dispclrstr();
+
+	stat_init();
+	printf("%u\n", idle_ctr_max);
+
 	while(1) 
 	{
-		printf("in the %s cnt = %d\n", __func__, cnt);
-
-		sleep(3);
-
-		printf("come back %s cnt = %d\n", __func__, cnt);
-
-		cnt++;
-
-
-		if (7 == cnt)
-		{
-			err = change_task_prio(2, 0);
-			if (NO_ERR == err)
-			{
-				printf("chang task prio success new_prio: %d\n", 0);
-			}
-		}
+		//sprintf(str, "cpu usage: %d idle_ctr: %u\n", cpu_usage, idle_ctr);
+		//pc_dispstr(10, 10, str, COLOR_BLACK, COLOR_WHITE);
+		printf("cpu_usage %u, idle_ctr: %d\n", cpu_usage, idle_ctr);
+		//printf("in the function %s\n", __func__);
+		time_dly(ticks);
+		//printf("in the function %s\n", __func__);
+		++ticks;
 	}
 }
 
@@ -154,8 +155,8 @@ int main(int argc, char *argv[])
 	os_init();
 
 	//task_create(tsk_fn1, 0, &tsk_stk1[TASK_STK_SIZE - 1]);
-	task_create(tsk_fn2, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
-	//task_create(tsk_fn3, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
+	//task_create(tsk_fn2, 1, &tsk_stk2[TASK_STK_SIZE - 1]);
+	task_create(tsk_fn3, 2, &tsk_stk3[TASK_STK_SIZE - 1]);
 
 	for (i = 0; i < TASK_NUM; ++i)
 	{

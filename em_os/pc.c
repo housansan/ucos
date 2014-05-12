@@ -98,7 +98,6 @@ void pc_dispstr(u8 x, u8 y, char *s, u8 fg, u8 bg)
 
 void pc_dispclrstr(void)
 {
-	pc_attr(WHITE, BLACK);
 	put_string("\x1b[2J");
 }
 

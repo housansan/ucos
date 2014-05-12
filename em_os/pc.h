@@ -19,14 +19,14 @@
 
 
 // color
-#define BLACK		0
-#define RED			1
-#define GREEN		2
-#define YELLOW		3
-#define BLUE		4
-#define MAGENTA		5
-#define CYAN		6
-#define WHITE		7
+#define COLOR_BLACK			0
+#define COLOR_RED			1
+#define COLOR_GREEN			2
+#define COLOR_YELLOW		3
+#define COLOR_BLUE			4
+#define COLOR_MAGENTA		5
+#define COLOR_CYAN			6
+#define COLOR_WHITE			7
 
 
 PC_EXT u32 rndnext;

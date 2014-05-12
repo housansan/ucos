@@ -97,7 +97,7 @@ TASK_EXT u8 rdy_grp;
 TASK_EXT u8 rdy_tbl[LOWEST_PRIO/8 + 1];
 
 // os is running
-TASK_EXT u8 running;
+TASK_EXT u8 os_running;
 
 
 
