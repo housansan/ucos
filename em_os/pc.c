@@ -72,6 +72,13 @@ void textpos(u8 x, u8 y)
 }
 
 
+void pc_dispdigit(u8 x, u8 y, u32 x1)
+{
+	textpos(x, y);
+	put_dec(x1);
+}
+
+
 void pc_dispchar(u8 x, u8 y, u8 c, u8 fg, u8 bg)
 {
 	down(disp_str_sem);
@@ -96,8 +103,9 @@ void pc_dispstr(u8 x, u8 y, char *s, u8 fg, u8 bg)
 }
 
 
-void pc_dispclrstr(void)
+void pc_dispclrstr(u8 fg, u8 bg)
 {
+	pc_attr(fg, bg);
 	put_string("\x1b[2J");
 }
 

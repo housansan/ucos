@@ -9,6 +9,10 @@
  */
 void time_dly(int ticks)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	if (ticks > 0)
 	{
 		ENTER_CRITICAL();
@@ -33,6 +37,10 @@ void time_dly(int ticks)
  */
 u8 time_dly_resume(u8 prio)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	struct tcb *ptcb;
 	u8 err = NO_ERR;
 
@@ -64,6 +72,10 @@ fail:
  */
 void time_set(u32 ticks)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	ENTER_CRITICAL();
 
 	jiffies = ticks;
@@ -74,6 +86,10 @@ void time_set(u32 ticks)
 
 u32 time_get(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	u32 ticks;
 
 	ENTER_CRITICAL();

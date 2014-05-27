@@ -21,4 +21,17 @@
 #define ERR_TIME_OUT				(12u)
 
 
+//static char *str_errno[] = 
+//{
+//	//[] = "Priory used";
+//};
+
+
+// TODO: 定义将 errno 转化成 string
+//static inline char *errno_to_str(u8 err)
+//{
+	//return str_errno[err];
+//}
+
+
 #endif

@@ -38,7 +38,8 @@ extern void pc_dispchar(u8 x, u8 y, u8 c, u8 fg, u8 bg);
 extern void pc_dispstr(u8 x, u8 y, char *s, u8 fg, u8 bg);
 extern u8 my_random(u8 n);
 extern void put_dec(u8 x2);
-extern void pc_dispclrstr();
+extern void pc_dispclrstr(u8 fg, u8 bg);
+extern void pc_dispdigit(u8 x, u8 y, u32 x1);
 
 
 #endif

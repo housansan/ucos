@@ -41,8 +41,10 @@ struct tcb
 	int used;
 
 	u8 prio;
+#if TASK_CREATE_EXT_EN
 	// 使用id来唯一确定task
-	u8 tcb_pid;
+	u16 tcb_pid;
+#endif
 	int time_slice;
 
 	/*
@@ -51,7 +53,7 @@ struct tcb
 	 * 3. sleep
 	 */
 	u8 stat;
-	u8 pend_to; // flag indicating PEND time out
+	u8 pend_to; // flag indicating PEND time out, TRUE time_out, otherwise 得到 semaphore or event etc.
 
 	// sleep time
 	int delay;
@@ -61,6 +63,9 @@ struct tcb
 
 
 
+// TODO: argument
+// 使用参数的好处: 可以通过其他task创建程序时
+// 传递参数
 typedef void (*tsk_fn)(void);
 
 // 管理所有空闲的tcb
@@ -82,7 +87,7 @@ TASK_EXT struct tcb *cur_tcb;
 TASK_EXT u8 cur_prio;
 
 // the highest priority
-TASK_EXT u8 high_rdy;
+TASK_EXT u8 high_rdy_prio;
 
 TASK_EXT struct tcb *tcb_high_rdy;
 
@@ -90,7 +95,7 @@ TASK_EXT struct tcb *tcb_prio_tbl[LOWEST_PRIO + 1];
 // table oftask control block
 TASK_EXT struct tcb tcb_tbl[TASK_NUM];
 
-TASK_EXT sigset_t cpu_sr;
+//TASK_EXT sigset_t cpu_sr;
 
 TASK_EXT u8 rdy_grp;
 // LOWEST_PRIO = 63
@@ -103,9 +108,6 @@ TASK_EXT u8 os_running;
 
 
 extern u8 task_create(tsk_fn func, int prio, u8 *ptos);
-
-extern void start_task(void);
-
 
 extern u8 task_suspend(u8 prio);
 
@@ -133,6 +135,8 @@ extern u8 general_check_prio(u8 prio);
 #define TASK_STAT_Q			(1 << 4)
 // task wait mutex
 #define TASK_STAT_MUTEX		(1 << 5)
+
+#define TASK_STAT_PEND_ANY	(TASK_STAT_SEM | TASK_STAT_MBOX | TASK_STAT_Q | TASK_STAT_MUTEX)
 
 
 #define PRIO_SELF		(0xff)

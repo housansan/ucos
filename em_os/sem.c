@@ -24,6 +24,10 @@ static struct event *sem_init(struct event *pevent, u16 cnt)
  */
 struct event *sem_create(u16 cnt)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	struct event *pevent;
 
 	ENTER_CRITICAL();
@@ -62,6 +66,10 @@ struct event *sem_create(u16 cnt)
  */
 u8 down_timeout(struct event *sem, u16 timeout)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	struct tcb *ptcb = cur_tcb;
 	u8 err = NO_ERR;
 
@@ -146,6 +154,10 @@ u8 down_trylock(struct event *sem)
  */
 u8 up(struct event *sem)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	u8 prio = 0;
 	struct tcb *ptcb;
 

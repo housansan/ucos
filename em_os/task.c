@@ -13,6 +13,10 @@
  */
 static struct tcb *find_free_tcb(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	struct tcb *ptcb = NULL;
 	struct list_head *list;
 
@@ -57,6 +61,18 @@ static u8 *task_stk_init(tsk_fn func, u8 *ptos)
 }
 
 
+static void tcb_init(struct tcb *ptcb, int prio, u8 *ptos)
+{
+	ptcb->stk = ptos;
+	ptcb->prio = prio;
+	ptcb->delay = 0;
+	ptcb->time_slice = prio + 10;
+	ptcb->pend_to = FALSE;
+	ptcb->stat = TASK_STAT_RDY;
+	list_init(&ptcb->list);
+}
+
+
 static struct tcb *tcb_get_init(int prio, u8 *ptos)
 {
 	struct tcb *ptcb = NULL;
@@ -66,10 +82,7 @@ static struct tcb *tcb_get_init(int prio, u8 *ptos)
 		goto no_more_tcb;
 	}
 
-	ptcb->stk = ptos;
-	ptcb->prio = prio;
-	ptcb->delay = 0;
-	ptcb->time_slice = prio + 10;
+	tcb_init(ptcb, prio, ptos);
 
 	return ptcb;
 
@@ -86,6 +99,10 @@ no_more_tcb:
  */
 static void tcb_manage(struct tcb *ptcb)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	u8 prio = ptcb->prio;
 	// 将高优先级
 	//
@@ -112,14 +129,24 @@ static void tcb_manage(struct tcb *ptcb)
  */
 u8 task_create(tsk_fn func, int prio, u8 *ptos)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	struct tcb *ptcb;
 	u8 *pstk;
+
+	/*
+	 * TODO: 判断优先级是否合法
+	 */
 	
 
 	ENTER_CRITICAL();
 
 	if (tcb_prio_tbl[prio])
 	{
+		EXIT_CRITICAL();
+
 		goto prio_used;
 	}
 
@@ -162,11 +189,7 @@ prio_used:
 
 no_more_tcb:
 
-	EXIT_CRITICAL();
-
 	tcb_prio_tbl[prio] = NULL;
-
-	EXIT_CRITICAL();
 	return ERR_NO_MORE_TCB;
 }
 
@@ -194,34 +217,14 @@ no_more_tcb:
 //}
 
 
-void start_task(void)
-{
-	ucontext_t *ucp;
-
-	if (TRUE == os_running)
-	{
-		return;
-	}
-
-	cur_prio = find_next_rdy_task();
-
-	debug("%s %d\n", __func__, cur_prio);
-
-	cur_tcb = tcb_prio_tbl[cur_prio];
-
-	high_rdy = cur_prio;
-	tcb_high_rdy = cur_tcb;
-
-	ucp = (ucontext_t *)cur_tcb->stk;
-
-	os_running = TRUE;
-
-	setcontext(ucp);
-}
 
 
 u8 task_suspend(u8 prio)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	struct tcb *ptcb;
 	u8 self;
 
@@ -296,6 +299,10 @@ task_no_exist:
 
 u8 task_resume(u8 prio)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	struct tcb *ptcb;
 
 	if (prio > LOWEST_PRIO)
@@ -358,6 +365,10 @@ task_no_exist:
  */
 u8 task_query(u8 prio, struct tcb *p_task_data)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	struct tcb *ptcb;
 
 	if (prio > LOWEST_PRIO)
@@ -434,6 +445,10 @@ u8 general_check_prio(u8 prio)
  */
 u8 change_task_prio(u8 old_prio, u8 new_prio)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	u8 err = NO_ERR;
 	struct tcb *old_ptcb;
 	struct tcb *new_ptcb;

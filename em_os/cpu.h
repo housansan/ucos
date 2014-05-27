@@ -2,7 +2,7 @@
 #define _CPU_H
 
 
-#include "common.h"
+//#include "common.h"
 
 #define ENTER_CRITICAL()	{sigset_t set;	\
 								sigemptyset(&set);	\

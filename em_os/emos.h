@@ -25,17 +25,6 @@
 #include "pc.h"
 
 
-//#define DEBUG
-
-#ifdef DEBUG
-//#define debug(fmt, arg...)	printf("DEBUG - " fmt, ##arg)
-#define debug(fmt, arg...)	do {	\
-		printf("%s--", __func__);	\
-		printf(fmt, ##arg);	\
-		}while(0)
-#else
-#define debug(fmt, arg...)
-#endif
 
 
 

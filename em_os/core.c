@@ -35,14 +35,20 @@ static const u8 unmap_tbl[] = {
 };
 
 
-void mem_clr(void *ptr, u32 len)
+void mem_set(void *ptr, int n, u32 len)
 {
+	char *s = ptr;
 	u32 i = 0;
-	char *mptr = ptr;
 	for (i = 0; i < len; ++i)
 	{
-		*mptr++ = 0;
+		*s++ = n;
 	}
+}
+
+
+void mem_clr(void *ptr, u32 len)
+{
+	mem_set(ptr, 0, len);
 }
 
 
@@ -91,6 +97,10 @@ void tcb_head_init(void)
 // 空闲 task
 static void task_idle(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	while(1) 
 	{
 
@@ -113,6 +123,10 @@ static void task_idle_init(void)
 
 static void task_stat(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	u32 run;
 	u8 usage;
 
@@ -173,6 +187,10 @@ static void task_stat_init(void)
  */
 void stat_init(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	// 延迟是为了与时钟节拍同步
 	// 这是恰好时 task_stat 运行
 	time_dly(2);
@@ -197,8 +215,11 @@ void stat_init(void)
 static void misc_init(void)
 {
 	lock_nesting = 0;
+	int_nesting = 0;
 	os_running = FALSE;
 	idle_ctr = 0;
+
+	sigemptyset(&sigset_mask);
 
 #if TASK_STAT_EN
 
@@ -210,12 +231,28 @@ static void misc_init(void)
 }
 
 
+static void rdy_list_init(void)
+{
+	rdy_grp = 0;
+	mem_clr(rdy_tbl, sizeof(rdy_tbl));
+
+	cur_prio = 0;
+	high_rdy_prio = 0;
+
+	tcb_high_rdy = NULL;
+	cur_tcb = NULL;
+}
+
+
 /*
  * TODO: 建立空闲任务 -- √
  */
 void os_init(void)
 {
 	tcb_head_init();
+
+	rdy_list_init();
+
 	misc_init();
 
 	// 空闲任务
@@ -237,17 +274,27 @@ void os_init(void)
  */
 void time_tick(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+
 	struct tcb *ptcb;
 	u8 prio;
+
+#if TIME_GET_SET_EN
+	time_tick_hook();
+#endif
 
 	if (FALSE == os_running)
 	{
 		return ;
 	}
 
-	//ENTER_CRITICAL();
-	
+	ENTER_CRITICAL();
+	++jiffies;
+	EXIT_CRITICAL();
 
+	ENTER_CRITICAL();
 	/*
 	 * FIXME: 
 	 * 1. 会把空闲idle_task也的delay
@@ -260,11 +307,25 @@ void time_tick(void)
 		{
 			if (0 == --ptcb->delay)
 			{
+				// 说明任务设置了延时等待, sem mutex 等设置延时等待
+				if (TASK_STAT_RDY != (ptcb->stat & TASK_STAT_PEND_ANY))
+				{
+					ptcb->stat &= ~TASK_STAT_PEND_ANY;
+					// 来判断任务是否是因为 延时而返回
+					ptcb->pend_to = TRUE;
+				}
+				else 
+				{
+					ptcb->pend_to = FALSE;
+				}
 				/*
 				 * Q: why 不直接 TASK_STAT_RDY == ptcb->stat
 				 * A: 可能有其他 status
 				 *
 				 */
+				// suspend 的 task 只能通过 task_resume 来恢复
+				// 如果任务没有设置 suspend 说明只要 ptcb->delay == 0
+				// 那么就可以进入 rdy
 				if (TASK_STAT_RDY == (ptcb->stat & TASK_STAT_SUSPEND))
 				{
 					tcb_enter_rdy(prio);
@@ -275,20 +336,19 @@ void time_tick(void)
 
 	}
 
-	jiffies++;
-	//EXIT_CRITICAL();
+	EXIT_CRITICAL();
 }
 
 
 void int_ctx_sw(void)
 {
-	high_rdy = find_next_rdy_task();
-	if (high_rdy == cur_prio)
+	high_rdy_prio = find_next_rdy_task();
+	if (high_rdy_prio == cur_prio)
 	{
 		return;
 	}
 
-	tcb_high_rdy = tcb_prio_tbl[high_rdy];
+	tcb_high_rdy = tcb_prio_tbl[high_rdy_prio];
 
 	ctx_sw();
 }
@@ -309,11 +369,21 @@ void tick_isr(void)
  */
 void sched_lock(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	if (os_running)
 	{
 		ENTER_CRITICAL();
-
-		lock_nesting++;
+		
+		if (0 == int_nesting)
+		{
+			if (lock_nesting < 255u)
+			{
+				lock_nesting++;
+			}
+		}
 
 		EXIT_CRITICAL();
 	}
@@ -325,6 +395,10 @@ void sched_lock(void)
  */
 void sched_unlock(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	if (os_running)
 	{
 		ENTER_CRITICAL();
@@ -332,9 +406,20 @@ void sched_unlock(void)
 		if (lock_nesting > 0)
 		{
 			lock_nesting--;
+			if (0 == int_nesting)
+			{
+				EXIT_CRITICAL();
+				schedule();
+			}
+			else 
+			{
+				EXIT_CRITICAL();
+			}
 		}
-
-		EXIT_CRITICAL();
+		else 
+		{
+			EXIT_CRITICAL();
+		}
 	}
 }
 
@@ -348,20 +433,24 @@ void sched_unlock(void)
  */
 void schedule(void)
 {
+#if CRITICAL_METHOD == 3
+	OS_CPU_SR cpu_sr = sigset_mask;
+#endif
+	
 	ENTER_CRITICAL();
 
 	/*
 	 * 调度不一定要把自己exit_rdy
 	 */
-	high_rdy = find_next_rdy_task();
+	high_rdy_prio = find_next_rdy_task();
 	/*
 	 * why 比较 high_rdy != cur_prio
 	 * 而不比较 tcb_high_rdy != cur_tcb
 	 * 这是因为在一些 8bit 和 16bit 比较慢
 	 */
-	if (high_rdy != cur_prio)
+	if (high_rdy_prio != cur_prio)
 	{
-		tcb_high_rdy = tcb_prio_tbl[high_rdy];
+		tcb_high_rdy = tcb_prio_tbl[high_rdy_prio];
 
 		task_sw();
 
@@ -382,7 +471,7 @@ void ctx_sw(void)
 {
 	ucontext_t *ucp;
 
-	cur_prio = high_rdy;
+	cur_prio = high_rdy_prio;
 	cur_tcb = tcb_high_rdy;
 
 	ucp = (ucontext_t *)cur_tcb->stk;
@@ -522,6 +611,31 @@ u8 find_next_wait_task(u8 grp, u8 tbl[])
 int find_next_rdy_task(void)
 {
 	return (find_next_task(rdy_grp, rdy_tbl));
+}
+
+
+
+void start_task(void)
+{
+	ucontext_t *ucp;
+
+	if (TRUE == os_running)
+	{
+		return;
+	}
+
+	high_rdy_prio = find_next_rdy_task();
+	cur_prio = high_rdy_prio;
+	tcb_high_rdy = tcb_prio_tbl[high_rdy_prio];
+	cur_tcb = tcb_high_rdy;
+
+	debug("%s %d\n", __func__, cur_prio);
+
+	ucp = (ucontext_t *)cur_tcb->stk;
+
+	os_running = TRUE;
+
+	setcontext(ucp);
 }
 
 
