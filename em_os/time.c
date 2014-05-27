@@ -34,6 +34,7 @@ void time_dly(int ticks)
 
 /*
  * 取消 延时
+ * 同时也会取消因 semaphore or event 等设置的延时
  */
 u8 time_dly_resume(u8 prio)
 {
@@ -57,10 +58,26 @@ u8 time_dly_resume(u8 prio)
 	// check
 	
 	ptcb->delay = 0;
+	// 如果有 semaphore event flag 挂起
+	if (TASK_STAT_RDY != (ptcb->stat & TASK_STAT_PEND_ANY))
+	{
+		ptcb->stat &= ~TASK_STAT_PEND_ANY;
+		ptcb->pend_to = TRUE;
+	}
+	else 
+	{
+		ptcb->pend_to = FALSE;
+	}
 
-	EXIT_CRITICAL();
-
-	schedule();
+	if (TASK_STAT_RDY == (ptcb->stat & TASK_STAT_SUSPEND))
+	{
+		EXIT_CRITICAL();
+		schedule();
+	}
+	else 
+	{
+		EXIT_CRITICAL();
+	}
 
 fail:
 	return err;
