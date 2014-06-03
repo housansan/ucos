@@ -48,15 +48,15 @@ extern void time_tick_hook();
 
 
 // 用于统计空闲任务
-CORE_EXT u32 idle_ctr;
-CORE_EXT u32 idle_ctr_max;
+CORE_EXT s32 idle_ctr;
+CORE_EXT s32 idle_ctr_max;
 CORE_EXT u8 task_idle_stk[TASK_IDLE_STK_SIZE];
 CORE_EXT u8 task_stat_stk[TASK_IDLE_STK_SIZE];
 CORE_EXT u32 lock_nesting;
 CORE_EXT u16 int_nesting;
 // 统计 task 状态
 CORE_EXT u8 stat_rdy;
-CORE_EXT u8 cpu_usage;
+CORE_EXT s8 cpu_usage;
 CORE_EXT sigset_t sigset_mask;
 
 

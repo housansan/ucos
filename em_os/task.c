@@ -277,6 +277,8 @@ u8 task_suspend(u8 prio)
 		goto task_no_exist;
 	}
 
+	// task suspend 后必须要 resume
+	// 来重新 rdy
 	ptcb->stat |= TASK_STAT_SUSPEND;
 
 	tcb_exit_rdy(prio);

@@ -27,15 +27,18 @@
 #define EVENT_TBL_SIZE		(LOWEST_PRIO + 1)
 #define MAX_EVENTS			(10)
 
-#define TASK_STAT_EN		(0)
+#define TASK_STAT_EN		(1)
 
 #define TRUE				(1)
 #define FALSE				(0)
 
 
 typedef unsigned char u8;
+typedef char s8;
 typedef unsigned short u16;
+typedef short s16;
 typedef unsigned int u32;
+typedef int s32;
 typedef u32 os_stk;
 
 typedef sigset_t OS_CPU_SR;

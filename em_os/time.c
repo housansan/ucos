@@ -71,6 +71,7 @@ u8 time_dly_resume(u8 prio)
 
 	if (TASK_STAT_RDY == (ptcb->stat & TASK_STAT_SUSPEND))
 	{
+		tcb_enter_rdy(prio);
 		EXIT_CRITICAL();
 		schedule();
 	}

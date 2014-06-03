@@ -189,18 +189,19 @@ void tsk_fn3(void)
 
 	//pc_dispclrstr();
 
-	//stat_init();
-	//printf("%u\n", idle_ctr_max);
+	stat_init();
+	printf("%u\n", idle_ctr_max);
 
 	while(1) 
 	{
-		pc_dispstr(x, y, "task_fn3", COLOR_BLUE, COLOR_GREEN);
-		y += 2;
+		//pc_dispstr(x, y, "task_fn3", COLOR_BLUE, COLOR_GREEN);
+		//y += 2;
+		printf("main -- cpu usage: %d\n", cpu_usage);
 		//sprintf(str, "cpu usage: %d idle_ctr: %u\n", cpu_usage, idle_ctr);
 		//pc_dispstr(10, 10, str, COLOR_BLACK, COLOR_WHITE);
 		//printf("cpu_usage %u, idle_ctr: %d\n", cpu_usage, idle_ctr);
 		//printf("in the function %s\n", __func__);
-		time_dly(4);
+		time_dly(10);
 		//printf("in the function %s\n", __func__);
 		//++ticks;
 	}
@@ -220,8 +221,8 @@ int main(int argc, char *argv[])
 
 	os_init();
 
-	err = task_create(tsk_fn1, 2, &tsk_stk1[TASK_STK_SIZE - 1]);
-	task_create(tsk_fn2, 4, &tsk_stk2[TASK_STK_SIZE - 1]);
+	//err = task_create(tsk_fn1, 2, &tsk_stk1[TASK_STK_SIZE - 1]);
+	//task_create(tsk_fn2, 4, &tsk_stk2[TASK_STK_SIZE - 1]);
 	task_create(tsk_fn3, 6, &tsk_stk3[TASK_STK_SIZE - 1]);
 
 	disp_str_sem = sem_create(1);

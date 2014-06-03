@@ -97,10 +97,13 @@ u8 down_timeout(struct event *sem, u16 timeout)
 	}
 
 	ptcb->stat |= TASK_STAT_SEM;
+	// 还没有 pend_to
+	ptcb->pend_to = FALSE;
 	ptcb->delay = timeout;
+	// 进入 wait 时
+	// 1. 退出 rdy
+	// 2. 进入 wait list
 	tcb_enter_wait(&sem->event_grp, sem->event_tbl, ptcb->prio);
-	//tcb_exit_rdy(ptcb->prio);
-	//tcb_enter_wait(&sem->event_grp, sem->event_tbl, ptcb->prio);
 
 	EXIT_CRITICAL();
 
@@ -112,9 +115,13 @@ u8 down_timeout(struct event *sem, u16 timeout)
 	// 1. 得到信号量
 	// 2. timeout
 	// 判断 stat
-	if (ptcb->stat & TASK_STAT_SEM)
+	// Q: why 不能通过判断 TASK_STAT_SEM 来 判断超时
+	// A: 1. timeout 是因为 time_ticks 会设置 pend_to 
+	//    2. 在 up 中也会对 task &= ~TASK_STAT_SEM, 这时就判断不了到底是得到 sem, 还是 timeout
+	if (TRUE == ptcb->pend_to)
 	{
 		debug("ERR_TIME_OUT\n");
+		ptcb->pend_to = FALSE;
 		err = ERR_TIME_OUT;
 	}
 
@@ -180,6 +187,7 @@ u8 up(struct event *sem)
 		ptcb = tcb_prio_tbl[prio];
 
 		ptcb->stat &= ~(TASK_STAT_SEM);
+		ptcb->pend_to = FALSE;
 		ptcb->delay = 0;
 
 		debug("clear stat: %d\n", ptcb->stat);

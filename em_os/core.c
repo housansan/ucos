@@ -127,8 +127,8 @@ static void task_stat(void)
 	OS_CPU_SR cpu_sr = sigset_mask;
 #endif
 	
-	u32 run;
-	u8 usage;
+	s32 run;
+	s8 usage;
 
 	while(FALSE == stat_rdy) 
 	{
@@ -145,10 +145,12 @@ static void task_stat(void)
 
 		EXIT_CRITICAL();
 
+		//printf("idle_ctr_max: %d\n", idle_ctr_max);
+
 		if (idle_ctr_max > 0)
 		{
-			usage = (u8)(100L - 100L * run / idle_ctr_max);
-			debug("%d, run: %d\n", usage, run);
+			usage = (s8)(100 - 100 * run / idle_ctr_max);
+			//printf("usage: %d, run: %d\n", usage, run);
 			if (usage > 100)
 			{
 				cpu_usage = 100;
@@ -523,8 +525,13 @@ void tcb_enter_rdy(u8 prio)
 
 void tcb_exit_wait(u8 *grp, u8 tbl[], u8 prio)
 {
-	//prio = find_next_wait_task(grp, tbl);
-	tcb_enter_rdy(prio);
+	// 必须 stat 才能进入 rdy
+	struct tcb *ptcb = tcb_prio_tbl[prio];
+	if (ptcb->stat == TASK_STAT_RDY)
+	{
+		tcb_enter_rdy(prio);
+	}
+	//tcb_enter_rdy(prio);
 	tcb_exit_tbl(grp, tbl, prio);
 }
 
